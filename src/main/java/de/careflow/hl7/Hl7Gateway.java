@@ -48,6 +48,14 @@ public class Hl7Gateway {
     }
 
     public ParsedMessage orm(PatientEntity patient, ClinicalOrderEntity order) {
+        return orm(patient, order, "NW");
+    }
+
+    public ParsedMessage cancelOrm(PatientEntity patient, ClinicalOrderEntity order) {
+        return orm(patient, order, "CA");
+    }
+
+    private ParsedMessage orm(PatientEntity patient, ClinicalOrderEntity order, String orderControl) {
         String controlId = nextControl("ORM");
         String ts = TS.format(order.getOrderedAt() == null ? Instant.now() : order.getOrderedAt());
         String raw = String.join("\r",
@@ -58,7 +66,7 @@ public class Hl7Gateway {
                         + "|" + patient.getSex(),
                 "PV1|1|I|" + patient.getWard() + "^" + patient.getBed() + "|||||||||||||||||||||||||||||||||"
                         + patient.getDepartment(),
-                "ORC|NW|" + order.getPlacerNumber() + "|||||||" + ts + "|||" + safe(order.getOrderedBy()),
+                "ORC|" + orderControl + "|" + order.getPlacerNumber() + "|||||||" + ts + "|||" + safe(order.getOrderedBy()),
                 "OBR|1|" + order.getPlacerNumber() + "||" + order.getCatalogCode() + "^" + order.getDisplayName() + "^L");
         return parse(raw, "ORM^O01", controlId);
     }

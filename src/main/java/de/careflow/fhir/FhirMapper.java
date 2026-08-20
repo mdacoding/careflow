@@ -171,9 +171,11 @@ public class FhirMapper {
     public MedicationRequest toMedication(ClinicalOrderEntity order) {
         MedicationRequest request = new MedicationRequest();
         request.setId(new IdType("MedicationRequest", order.getId()));
-        request.setStatus(order.getStatus() == OrderStatus.BLOCKED
-                ? MedicationRequest.MedicationRequestStatus.STOPPED
-                : MedicationRequest.MedicationRequestStatus.ACTIVE);
+        request.setStatus(switch (order.getStatus()) {
+            case BLOCKED -> MedicationRequest.MedicationRequestStatus.STOPPED;
+            case CANCELLED -> MedicationRequest.MedicationRequestStatus.CANCELLED;
+            default -> MedicationRequest.MedicationRequestStatus.ACTIVE;
+        });
         request.setIntent(MedicationRequest.MedicationRequestIntent.ORDER);
         request.setSubject(new Reference("Patient/" + order.getPatientId()));
         request.setMedication(new CodeableConcept().setText(order.getDisplayName())

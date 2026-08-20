@@ -40,7 +40,13 @@ class Hl7GatewayTest {
         Hl7Gateway.ParsedMessage orm = gateway.orm(patient, order);
         assertThat(orm.messageType()).isEqualTo("ORM^O01");
         assertThat(orm.raw()).contains("ORM^O01").contains("MKN-10021").contains("BBCRP");
+        assertThat(orm.raw()).contains("ORC|NW").contains("PLC-TEST");
         assertThat(gateway.ack(orm.controlId(), "O01").ackCode()).isEqualTo("AA");
         assertThat(gateway.oru(patient, order, List.of()).raw()).contains("ORU^R01");
+
+        Hl7Gateway.ParsedMessage cancel = gateway.cancelOrm(patient, order);
+        assertThat(cancel.messageType()).isEqualTo("ORM^O01");
+        assertThat(cancel.raw()).contains("ORC|CA").contains("PLC-TEST");
+        assertThat(cancel.raw()).doesNotContain("ORC|NW");
     }
 }

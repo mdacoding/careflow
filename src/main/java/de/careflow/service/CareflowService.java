@@ -344,6 +344,12 @@ public class CareflowService {
         ClinicalOrderEntity order = order(orderId);
         de.careflow.domain.OrderStateMachine.require(order.getKind(), order.getStatus(), OrderStatus.CANCELLED);
         order.setStatus(OrderStatus.CANCELLED);
+        if (order.getKind() == OrderKind.LAB) {
+            PatientEntity patient = patient(order.getPatientId());
+            Hl7Gateway.ParsedMessage orm = hl7Gateway.cancelOrm(patient, order);
+            persistHl7(order.getId(), "OUTBOUND", orm);
+            persistHl7(order.getId(), "INBOUND", hl7Gateway.ack(orm.controlId(), "O01"));
+        }
         auditService.record(staff, "Auftrag storniert", "ClinicalOrder", order.getId(), order.getDisplayName());
         socketHandler.publish("ORDER_CANCELLED", order.getPatientId(), order.getId(), order.getDisplayName());
         return order;
