@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, asApiError, isAmtsBlock, isIllegalState, isLabOverlap, isOptimisticLock } from "./api";
 import { AuditLog } from "./AuditLog";
 import { DemoGuide, demoHint } from "./DemoGuide";
+import { MshRoute, OrcChip } from "./Hl7Interop";
 import { interpLabel, StatusChip } from "./StatusChip";
 import type { AuditEvent, Catalog, CdsError, DemoInfo, Hl7View, OrderView, PatientChart, Staff, WardCard, WorklistItem, WsEvent } from "./types";
 
@@ -28,34 +29,6 @@ function parseWsEvent(raw: string): WsEvent | null {
 
 function liveWording(event: WsEvent): string {
   return LIVE_WORDING[event.type] ?? event.message ?? event.type;
-}
-
-const ORC_LABEL: Record<string, string> = {
-  NW: "Auftrag neu",
-  SC: "in Analytik",
-  CA: "storniert",
-  CM: "befundet (ORU)",
-};
-
-const ORC_CHIP: Record<string, string> = {
-  NW: "status-PLACED",
-  SC: "status-IN_LAB",
-  CA: "status-CANCELLED",
-  CM: "status-RESULTED",
-};
-
-/** First `ORC|XX` in the raw HL7 pipe message. ACK has no ORC segment. */
-function parseOrcControl(raw: string): string | undefined {
-  return /ORC\|([A-Z]{2})/.exec(raw)?.[1];
-}
-
-function OrcChip({ raw }: { raw: string }) {
-  const code = parseOrcControl(raw);
-  const label = code ? ORC_LABEL[code] : undefined;
-  if (!code || !label) {
-    return null;
-  }
-  return <span className={`chip ${ORC_CHIP[code] ?? ""}`}>{label}</span>;
 }
 
 /** CPOE Storno: LAB in PLACED/IN_LAB, MED in ACTIVE. Not BLOCKED, RESULTED, CANCELLED. */
@@ -857,6 +830,7 @@ export default function App() {
                         <td>{message.direction === "OUTBOUND" ? "Ausgang" : "Eingang"}</td>
                         <td>
                           {message.messageType} {message.ackCode ?? ""}
+                          <MshRoute raw={message.raw} />
                         </td>
                         <td>
                           <OrcChip raw={message.raw} />

@@ -55,6 +55,7 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 
 **Interop**
 - HAPI HL7 v2.5: `ORM^O01` (ORC NW / SC / CA), `ORU^R01` (ORC CM), `ACK` (PipeParser, ohne Validating)
+- Ausgang ORM NW/CA von CAREFLOW, Eingang SC/ORU von LABSYS, ACK jeweils vom Empfänger. FHIR-Suche gebatched.
 - HAPI FHIR 7.6 R4 RestfulServer: Patient, Encounter, AllergyIntolerance, ServiceRequest, Observation, DiagnosticReport, MedicationRequest
 - FHIR Collection-Bundle je Akte unter `/api/patients/{id}/fhir`
 

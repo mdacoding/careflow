@@ -35,8 +35,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class FhirMapper {
@@ -195,14 +199,18 @@ public class FhirMapper {
     }
 
     public List<Encounter> allEncounters() {
-        return encounters.findAll().stream()
-                .map(entity -> toEncounter(entity, patients.findById(entity.getPatientId()).orElseThrow()))
+        List<EncounterEntity> all = encounters.findAll();
+        Map<String, PatientEntity> byId = patientsByIds(all.stream().map(EncounterEntity::getPatientId).toList());
+        return all.stream()
+                .map(entity -> toEncounter(entity, Optional.ofNullable(byId.get(entity.getPatientId())).orElseThrow()))
                 .toList();
     }
 
     public List<Encounter> encountersForPatient(String patientId) {
-        return encounters.findByPatientId(patientId).stream()
-                .map(entity -> toEncounter(entity, patients.findById(entity.getPatientId()).orElseThrow()))
+        List<EncounterEntity> list = encounters.findByPatientId(patientId);
+        Map<String, PatientEntity> byId = patientsByIds(list.stream().map(EncounterEntity::getPatientId).toList());
+        return list.stream()
+                .map(entity -> toEncounter(entity, Optional.ofNullable(byId.get(entity.getPatientId())).orElseThrow()))
                 .toList();
     }
 
@@ -243,9 +251,11 @@ public class FhirMapper {
     }
 
     public List<Observation> allObservations() {
+        List<ObservationEntity> all = observations.findAll();
+        Map<String, ClinicalOrderEntity> ordersById = ordersByIds(all.stream().map(ObservationEntity::getOrderId).toList());
         List<Observation> list = new ArrayList<>();
-        for (ObservationEntity entity : observations.findAll()) {
-            ClinicalOrderEntity order = orders.findById(entity.getOrderId()).orElse(null);
+        for (ObservationEntity entity : all) {
+            ClinicalOrderEntity order = ordersById.get(entity.getOrderId());
             if (order != null) {
                 list.add(toObservation(entity, order));
             }
@@ -254,12 +264,18 @@ public class FhirMapper {
     }
 
     public List<Observation> observationsForPatient(String patientId) {
+        List<ClinicalOrderEntity> patientOrders = orders.findByPatientIdOrderByOrderedAtDesc(patientId);
+        List<String> labOrderIds = patientOrders.stream()
+                .filter(order -> order.getKind() == OrderKind.LAB)
+                .map(ClinicalOrderEntity::getId)
+                .toList();
+        Map<String, List<ObservationEntity>> byOrder = observationsByOrderIds(labOrderIds);
         List<Observation> list = new ArrayList<>();
-        for (ClinicalOrderEntity order : orders.findByPatientIdOrderByOrderedAtDesc(patientId)) {
+        for (ClinicalOrderEntity order : patientOrders) {
             if (order.getKind() != OrderKind.LAB) {
                 continue;
             }
-            for (ObservationEntity entity : observations.findByOrderIdOrderBySortOrderAsc(order.getId())) {
+            for (ObservationEntity entity : byOrder.getOrDefault(order.getId(), List.of())) {
                 list.add(toObservation(entity, order));
             }
         }
@@ -267,20 +283,32 @@ public class FhirMapper {
     }
 
     public List<DiagnosticReport> allReports() {
+        List<ClinicalOrderEntity> all = orders.findAll();
+        List<String> resultedLabIds = all.stream()
+                .filter(order -> order.getKind() == OrderKind.LAB && order.getStatus() == OrderStatus.RESULTED)
+                .map(ClinicalOrderEntity::getId)
+                .toList();
+        Map<String, List<ObservationEntity>> byOrder = observationsByOrderIds(resultedLabIds);
         List<DiagnosticReport> list = new ArrayList<>();
-        for (ClinicalOrderEntity order : orders.findAll()) {
+        for (ClinicalOrderEntity order : all) {
             if (order.getKind() == OrderKind.LAB && order.getStatus() == OrderStatus.RESULTED) {
-                list.add(toReport(order, observations.findByOrderIdOrderBySortOrderAsc(order.getId())));
+                list.add(toReport(order, byOrder.getOrDefault(order.getId(), List.of())));
             }
         }
         return list;
     }
 
     public List<DiagnosticReport> reportsForPatient(String patientId) {
+        List<ClinicalOrderEntity> patientOrders = orders.findByPatientIdOrderByOrderedAtDesc(patientId);
+        List<String> resultedLabIds = patientOrders.stream()
+                .filter(order -> order.getKind() == OrderKind.LAB && order.getStatus() == OrderStatus.RESULTED)
+                .map(ClinicalOrderEntity::getId)
+                .toList();
+        Map<String, List<ObservationEntity>> byOrder = observationsByOrderIds(resultedLabIds);
         List<DiagnosticReport> list = new ArrayList<>();
-        for (ClinicalOrderEntity order : orders.findByPatientIdOrderByOrderedAtDesc(patientId)) {
+        for (ClinicalOrderEntity order : patientOrders) {
             if (order.getKind() == OrderKind.LAB && order.getStatus() == OrderStatus.RESULTED) {
-                list.add(toReport(order, observations.findByOrderIdOrderBySortOrderAsc(order.getId())));
+                list.add(toReport(order, byOrder.getOrDefault(order.getId(), List.of())));
             }
         }
         return list;
@@ -308,5 +336,37 @@ public class FhirMapper {
             }
         }
         return fhirContext.newJsonParser().setPrettyPrint(true).encodeResourceToString(bundle);
+    }
+
+    private Map<String, PatientEntity> patientsByIds(List<String> patientIds) {
+        List<String> ids = patientIds.stream().distinct().toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return patients.findByIdIn(ids).stream()
+                .collect(Collectors.toMap(PatientEntity::getId, patient -> patient));
+    }
+
+    private Map<String, ClinicalOrderEntity> ordersByIds(List<String> orderIds) {
+        List<String> ids = orderIds.stream().distinct().toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return orders.findByIdIn(ids).stream()
+                .collect(Collectors.toMap(ClinicalOrderEntity::getId, order -> order));
+    }
+
+    private Map<String, List<ObservationEntity>> observationsByOrderIds(List<String> orderIds) {
+        if (orderIds.isEmpty()) {
+            return Map.of();
+        }
+        return observations.findByOrderIdIn(orderIds).stream()
+                .collect(Collectors.groupingBy(
+                        ObservationEntity::getOrderId,
+                        Collectors.collectingAndThen(
+                                Collectors.toList(),
+                                list -> list.stream()
+                                        .sorted(Comparator.comparingInt(ObservationEntity::getSortOrder))
+                                        .toList())));
     }
 }

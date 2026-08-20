@@ -1,4 +1,4 @@
-package de.careflow;
+﻿package de.careflow;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import de.careflow.demo.DemoDataSeeder;
@@ -222,7 +222,7 @@ class CareflowApiTest {
         boolean secureFlag = java.util.Arrays.stream(cookie.split(";"))
                 .map(String::trim)
                 .anyMatch(part -> part.equalsIgnoreCase("Secure"));
-        assertThat(secureFlag).as("Secure bleibt aus für lokale HTTP-Demo und Vite-Proxy").isFalse();
+        assertThat(secureFlag).as("Secure bleibt aus fÃ¼r lokale HTTP-Demo und Vite-Proxy").isFalse();
     }
 
     @Test
@@ -250,7 +250,7 @@ class CareflowApiTest {
         try {
             mvc.perform(get("/api/audit").session(physician))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[?(@.action=='Laborauftrag übermittelt')]").isNotEmpty())
+                    .andExpect(jsonPath("$[?(@.action=='Laborauftrag Ã¼bermittelt')]").isNotEmpty())
                     .andExpect(jsonPath("$[0].id").exists())
                     .andExpect(jsonPath("$[0].actor").exists())
                     .andExpect(jsonPath("$[0].actorRole").exists())
@@ -266,7 +266,7 @@ class CareflowApiTest {
         ResponseEntity<String> filtered = rest.getForEntity(
                 "/fhir/Observation?patient=" + DemoDataSeeder.MIRA_ID + "&_format=json", String.class);
         assertThat(filtered.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(filtered.getBody()).contains("Observation");
+        assertThat(filtered.getBody()).contains("Bundle").contains("Observation");
         assertThat(filtered.getBody()).contains(DemoDataSeeder.MIRA_ID);
         assertThat(filtered.getBody()).doesNotContain("MKN-10021");
 

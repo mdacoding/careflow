@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.List;
 
 public interface ClinicalOrderRepository extends JpaRepository<ClinicalOrderEntity, String> {
+    List<ClinicalOrderEntity> findByIdIn(Collection<String> ids);
+
     List<ClinicalOrderEntity> findByPatientIdOrderByOrderedAtDesc(String patientId);
 
     List<ClinicalOrderEntity> findByKindAndStatusInOrderByOrderedAtAsc(OrderKind kind, Collection<OrderStatus> statuses);
