@@ -255,7 +255,7 @@ public class CareflowService {
         PatientEntity patient = patient(order.getPatientId());
         Hl7Gateway.ParsedMessage orm = hl7Gateway.statusOrm(patient, order);
         persistHl7(order.getId(), "INBOUND", orm);
-        persistHl7(order.getId(), "OUTBOUND", hl7Gateway.ack(orm.controlId(), "O01"));
+        persistHl7(order.getId(), "OUTBOUND", hl7Gateway.ackFromCareflow(orm.controlId(), "O01"));
         auditService.record(staff, "Laborauftrag angenommen", "ClinicalOrder", order.getId(), order.getDisplayName());
         socketHandler.publish("ORDER_ACCEPTED", order.getPatientId(), order.getId(), "Labor hat angenommen");
         return order;
@@ -277,7 +277,7 @@ public class CareflowService {
         order.setCompletedAt(Instant.now());
         Hl7Gateway.ParsedMessage oru = hl7Gateway.oru(patient, order, results);
         persistHl7(order.getId(), "INBOUND", oru);
-        persistHl7(order.getId(), "OUTBOUND", hl7Gateway.ack(oru.controlId(), "R01"));
+        persistHl7(order.getId(), "OUTBOUND", hl7Gateway.ackFromCareflow(oru.controlId(), "R01"));
         auditService.record(staff, "Befund freigegeben", "ClinicalOrder", order.getId(), order.getDisplayName());
         socketHandler.publish("RESULT_READY", order.getPatientId(), order.getId(), "Befund " + order.getDisplayName());
         return order;

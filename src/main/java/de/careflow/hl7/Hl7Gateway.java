@@ -56,14 +56,20 @@ public class Hl7Gateway {
     }
 
     public ParsedMessage statusOrm(PatientEntity patient, ClinicalOrderEntity order) {
-        return orm(patient, order, "SC");
+        return orm(patient, order, "SC", true);
     }
 
     private ParsedMessage orm(PatientEntity patient, ClinicalOrderEntity order, String orderControl) {
+        return orm(patient, order, orderControl, false);
+    }
+
+    private ParsedMessage orm(PatientEntity patient, ClinicalOrderEntity order, String orderControl, boolean fromLab) {
         String controlId = nextControl("ORM");
         String ts = TS.format(order.getOrderedAt() == null ? Instant.now() : order.getOrderedAt());
+        String sender = fromLab ? receivingApp : sendingApp;
+        String receiver = fromLab ? sendingApp : receivingApp;
         String raw = String.join("\r",
-                "MSH|^~\\&|" + sendingApp + "|" + clinic + "|" + receivingApp + "|" + clinic + "|" + ts
+                "MSH|^~\\&|" + sender + "|" + clinic + "|" + receiver + "|" + clinic + "|" + ts
                         + "||ORM^O01|" + controlId + "|P|2.5",
                 "PID|1||" + patient.getMrn() + "^^^" + clinic + "||" + patient.getFamilyName() + "^"
                         + patient.getGivenName() + "||" + patient.getBirthDate().toString().replace("-", "")
@@ -76,10 +82,20 @@ public class Hl7Gateway {
     }
 
     public ParsedMessage ack(String incomingControlId, String incomingType) {
+        return ack(incomingControlId, incomingType, false);
+    }
+
+    public ParsedMessage ackFromCareflow(String incomingControlId, String incomingType) {
+        return ack(incomingControlId, incomingType, true);
+    }
+
+    private ParsedMessage ack(String incomingControlId, String incomingType, boolean fromCareflow) {
         String controlId = nextControl("ACK");
         String ts = TS.format(Instant.now());
+        String sender = fromCareflow ? sendingApp : receivingApp;
+        String receiver = fromCareflow ? receivingApp : sendingApp;
         String raw = String.join("\r",
-                "MSH|^~\\&|" + receivingApp + "|" + clinic + "|" + sendingApp + "|" + clinic + "|" + ts
+                "MSH|^~\\&|" + sender + "|" + clinic + "|" + receiver + "|" + clinic + "|" + ts
                         + "||ACK^" + incomingType + "|" + controlId + "|P|2.5",
                 "MSA|AA|" + incomingControlId + "|Nachricht angenommen");
         return parse(raw, "ACK", controlId, "AA");

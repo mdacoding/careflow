@@ -41,17 +41,36 @@ class Hl7GatewayTest {
         assertThat(orm.messageType()).isEqualTo("ORM^O01");
         assertThat(orm.raw()).contains("ORM^O01").contains("MKN-10021").contains("BBCRP");
         assertThat(orm.raw()).contains("ORC|NW").contains("PLC-TEST");
-        assertThat(gateway.ack(orm.controlId(), "O01").ackCode()).isEqualTo("AA");
-        assertThat(gateway.oru(patient, order, List.of()).raw()).contains("ORU^R01");
+        assertThat(mshApps(orm.raw())).containsExactly("CAREFLOW", "LABSYS");
+
+        Hl7Gateway.ParsedMessage labAck = gateway.ack(orm.controlId(), "O01");
+        assertThat(labAck.ackCode()).isEqualTo("AA");
+        assertThat(mshApps(labAck.raw())).containsExactly("LABSYS", "CAREFLOW");
+
+        Hl7Gateway.ParsedMessage careflowAck = gateway.ackFromCareflow(orm.controlId(), "O01");
+        assertThat(careflowAck.ackCode()).isEqualTo("AA");
+        assertThat(mshApps(careflowAck.raw())).containsExactly("CAREFLOW", "LABSYS");
+
+        Hl7Gateway.ParsedMessage oru = gateway.oru(patient, order, List.of());
+        assertThat(oru.raw()).contains("ORU^R01");
+        assertThat(mshApps(oru.raw())).containsExactly("LABSYS", "CAREFLOW");
 
         Hl7Gateway.ParsedMessage cancel = gateway.cancelOrm(patient, order);
         assertThat(cancel.messageType()).isEqualTo("ORM^O01");
         assertThat(cancel.raw()).contains("ORC|CA").contains("PLC-TEST");
         assertThat(cancel.raw()).doesNotContain("ORC|NW");
+        assertThat(mshApps(cancel.raw())).containsExactly("CAREFLOW", "LABSYS");
 
         Hl7Gateway.ParsedMessage status = gateway.statusOrm(patient, order);
         assertThat(status.messageType()).isEqualTo("ORM^O01");
         assertThat(status.raw()).contains("ORC|SC").contains("PLC-TEST");
         assertThat(status.raw()).doesNotContain("ORC|NW");
+        assertThat(mshApps(status.raw())).containsExactly("LABSYS", "CAREFLOW");
+    }
+
+    private static String[] mshApps(String raw) {
+        String msh = raw.lines().findFirst().orElse("");
+        String[] fields = msh.split("\\|", -1);
+        return new String[] {fields[2], fields[4]};
     }
 }

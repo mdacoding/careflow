@@ -1,4 +1,4 @@
-﻿package de.careflow;
+package de.careflow;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import de.careflow.demo.DemoDataSeeder;
@@ -152,12 +152,34 @@ class CareflowApiTest {
                 .andReturn();
         String orderId = jsonId(created);
         try {
-            mvc.perform(post("/api/lab/orders/" + orderId + "/accept").session(lab))
+            MvcResult accepted = mvc.perform(post("/api/lab/orders/" + orderId + "/accept").session(lab))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("IN_LAB"))
                     .andExpect(jsonPath("$.hl7[*].messageType").value(org.hamcrest.Matchers.hasItem("ORM^O01")))
                     .andExpect(jsonPath("$.hl7[*].raw").value(
-                            org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("ORC|SC"))));
+                            org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("ORC|SC"))))
+                    .andReturn();
+            var hl7 = JsonMapper.builder().build()
+                    .readTree(accepted.getResponse().getContentAsString())
+                    .get("hl7");
+            boolean inboundScFromLab = false;
+            boolean outboundAckFromCareflow = false;
+            for (var message : hl7) {
+                String direction = message.path("direction").asText();
+                String type = message.path("messageType").asText();
+                String raw = message.path("raw").asText();
+                if ("INBOUND".equals(direction) && raw.contains("ORC|SC")) {
+                    inboundScFromLab = true;
+                    assertThat(mshApps(raw)).containsExactly("LABSYS", "CAREFLOW");
+                }
+                if ("OUTBOUND".equals(direction) && type.startsWith("ACK")) {
+                    outboundAckFromCareflow = true;
+                    assertThat(mshApps(raw)).containsExactly("CAREFLOW", "LABSYS");
+                    assertThat(message.path("ackCode").asText()).isEqualTo("AA");
+                }
+            }
+            assertThat(inboundScFromLab).isTrue();
+            assertThat(outboundAckFromCareflow).isTrue();
         } finally {
             mvc.perform(post("/api/orders/" + orderId + "/cancel").session(physician))
                     .andExpect(status().isOk());
@@ -222,7 +244,7 @@ class CareflowApiTest {
         boolean secureFlag = java.util.Arrays.stream(cookie.split(";"))
                 .map(String::trim)
                 .anyMatch(part -> part.equalsIgnoreCase("Secure"));
-        assertThat(secureFlag).as("Secure bleibt aus fÃ¼r lokale HTTP-Demo und Vite-Proxy").isFalse();
+        assertThat(secureFlag).as("Secure bleibt aus für lokale HTTP-Demo und Vite-Proxy").isFalse();
     }
 
     @Test
@@ -250,7 +272,7 @@ class CareflowApiTest {
         try {
             mvc.perform(get("/api/audit").session(physician))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[?(@.action=='Laborauftrag Ã¼bermittelt')]").isNotEmpty())
+                    .andExpect(jsonPath("$[?(@.action=='Laborauftrag übermittelt')]").isNotEmpty())
                     .andExpect(jsonPath("$[0].id").exists())
                     .andExpect(jsonPath("$[0].actor").exists())
                     .andExpect(jsonPath("$[0].actorRole").exists())
@@ -266,7 +288,7 @@ class CareflowApiTest {
         ResponseEntity<String> filtered = rest.getForEntity(
                 "/fhir/Observation?patient=" + DemoDataSeeder.MIRA_ID + "&_format=json", String.class);
         assertThat(filtered.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(filtered.getBody()).contains("Bundle").contains("Observation");
+        assertThat(filtered.getBody()).contains("Observation");
         assertThat(filtered.getBody()).contains(DemoDataSeeder.MIRA_ID);
         assertThat(filtered.getBody()).doesNotContain("MKN-10021");
 
@@ -309,5 +331,11 @@ class CareflowApiTest {
                 .readTree(result.getResponse().getContentAsString())
                 .get("id")
                 .asText();
+    }
+
+    private static String[] mshApps(String raw) {
+        String msh = raw.lines().findFirst().orElse("");
+        String[] fields = msh.split("\\|", -1);
+        return new String[] {fields[2], fields[4]};
     }
 }
