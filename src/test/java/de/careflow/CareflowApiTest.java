@@ -288,7 +288,7 @@ class CareflowApiTest {
         ResponseEntity<String> filtered = rest.getForEntity(
                 "/fhir/Observation?patient=" + DemoDataSeeder.MIRA_ID + "&_format=json", String.class);
         assertThat(filtered.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(filtered.getBody()).contains("Observation");
+        assertThat(filtered.getBody()).contains("Bundle").contains("Observation");
         assertThat(filtered.getBody()).contains(DemoDataSeeder.MIRA_ID);
         assertThat(filtered.getBody()).doesNotContain("MKN-10021");
 
