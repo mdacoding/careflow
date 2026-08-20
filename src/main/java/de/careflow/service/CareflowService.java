@@ -33,6 +33,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
@@ -147,9 +148,38 @@ public class CareflowService {
         return observations.findByOrderIdOrderBySortOrderAsc(orderId);
     }
 
+    public Map<String, List<ObservationEntity>> observationsByOrderIds(List<String> orderIds) {
+        if (orderIds.isEmpty()) {
+            return Map.of();
+        }
+        return observations.findByOrderIdIn(orderIds).stream()
+                .collect(Collectors.groupingBy(
+                        ObservationEntity::getOrderId,
+                        Collectors.collectingAndThen(
+                                Collectors.toList(),
+                                list -> list.stream()
+                                        .sorted(Comparator.comparingInt(ObservationEntity::getSortOrder))
+                                        .toList())));
+    }
+
     public List<ClinicalOrderEntity> labWorklist() {
         return orders.findByKindAndStatusInOrderByOrderedAtAsc(
                 OrderKind.LAB, EnumSet.of(OrderStatus.PLACED, OrderStatus.IN_LAB));
+    }
+
+    public List<WorklistRow> labWorklistBoard() {
+        List<ClinicalOrderEntity> openOrders = labWorklist();
+        List<String> patientIds = openOrders.stream().map(ClinicalOrderEntity::getPatientId).distinct().toList();
+        Map<String, PatientEntity> byId = patientIds.isEmpty()
+                ? Map.of()
+                : patients.findByIdIn(patientIds).stream()
+                        .collect(Collectors.toMap(PatientEntity::getId, patient -> patient));
+        return openOrders.stream()
+                .map(order -> new WorklistRow(order, byId.get(order.getPatientId())))
+                .toList();
+    }
+
+    public record WorklistRow(ClinicalOrderEntity order, PatientEntity patient) {
     }
 
     public List<Hl7MessageEntity> hl7Log() {
@@ -158,6 +188,20 @@ public class CareflowService {
 
     public List<Hl7MessageEntity> hl7Of(String orderId) {
         return hl7Messages.findByOrderIdOrderByCreatedAtAsc(orderId);
+    }
+
+    public Map<String, List<Hl7MessageEntity>> hl7ByOrderIds(List<String> orderIds) {
+        if (orderIds.isEmpty()) {
+            return Map.of();
+        }
+        return hl7Messages.findByOrderIdIn(orderIds).stream()
+                .collect(Collectors.groupingBy(
+                        Hl7MessageEntity::getOrderId,
+                        Collectors.collectingAndThen(
+                                Collectors.toList(),
+                                list -> list.stream()
+                                        .sorted(Comparator.comparing(Hl7MessageEntity::getCreatedAt))
+                                        .toList())));
     }
 
     public List<CdsAlertEntity> alertsOf(String patientId) {
@@ -319,8 +363,22 @@ public class CareflowService {
                 .orElse(null);
     }
 
+    public Double latestCreatinine(
+            List<ClinicalOrderEntity> orders, Map<String, List<ObservationEntity>> observationsByOrder) {
+        return orders.stream()
+                .filter(order -> "KREA".equals(order.getCatalogCode()) && order.getStatus() == OrderStatus.RESULTED)
+                .findFirst()
+                .flatMap(order -> observationsByOrder.getOrDefault(order.getId(), List.of()).stream().findFirst())
+                .map(ObservationEntity::getValueNum)
+                .map(BigDecimal::doubleValue)
+                .orElse(null);
+    }
+
     public Integer latestEgfr(PatientEntity patient) {
-        Double creatinine = latestCreatinine(patient.getId());
+        return latestEgfr(patient, latestCreatinine(patient.getId()));
+    }
+
+    public Integer latestEgfr(PatientEntity patient, Double creatinine) {
         if (creatinine == null) {
             return null;
         }

@@ -7,5 +7,7 @@ import java.util.List;
 public interface Hl7MessageRepository extends JpaRepository<Hl7MessageEntity, String> {
     List<Hl7MessageEntity> findByOrderIdOrderByCreatedAtAsc(String orderId);
 
+    List<Hl7MessageEntity> findByOrderIdIn(List<String> orderIds);
+
     List<Hl7MessageEntity> findAllByOrderByCreatedAtDesc();
 }

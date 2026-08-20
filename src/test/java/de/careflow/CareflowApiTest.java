@@ -99,6 +99,40 @@ class CareflowApiTest {
     }
 
     @Test
+    void physicianCanCancelPlacedLabButNurseCannot() throws Exception {
+        MockHttpSession nurse = session("schmidt");
+        MvcResult created = mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                        .session(physician)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"BBCRP\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PLACED"))
+                .andReturn();
+        String bbcRpId = jsonId(created);
+        String bbId = null;
+        try {
+            mvc.perform(post("/api/orders/" + bbcRpId + "/cancel").session(nurse))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post("/api/orders/" + bbcRpId + "/cancel").session(physician))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("CANCELLED"));
+            bbId = jsonId(mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                            .session(physician)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"code\":\"BB\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.catalogCode").value("BB"))
+                    .andExpect(jsonPath("$.status").value("PLACED"))
+                    .andReturn());
+        } finally {
+            if (bbId != null) {
+                mvc.perform(post("/api/orders/" + bbId + "/cancel").session(physician))
+                        .andExpect(status().isOk());
+            }
+        }
+    }
+
+    @Test
     void overlappingLabPanelReturnsConflictWhileTropRemainsAllowed() throws Exception {
         MvcResult created = mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
                         .session(physician)

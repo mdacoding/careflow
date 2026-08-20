@@ -3,6 +3,8 @@ spring:
     url: jdbc:h2:mem:careflow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
     username: sa
     password:
+  jpa:
+    open-in-view: false
 
 careflow:
   clinic-name: Musterklinikum Nord

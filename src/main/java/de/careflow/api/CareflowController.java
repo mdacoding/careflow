@@ -5,6 +5,7 @@ import de.careflow.demo.DemoDataSeeder;
 import de.careflow.domain.ClinicalOrderEntity;
 import de.careflow.domain.EncounterEntity;
 import de.careflow.domain.Hl7MessageEntity;
+import de.careflow.domain.ObservationEntity;
 import de.careflow.domain.PatientEntity;
 import de.careflow.fhir.FhirMapper;
 import de.careflow.security.StaffDirectory;
@@ -93,6 +94,10 @@ public class CareflowController {
         PatientEntity patient = careflow.patient(id);
         EncounterEntity encounter = careflow.encounter(id);
         List<ClinicalOrderEntity> orders = careflow.ordersOf(id);
+        List<String> orderIds = orders.stream().map(ClinicalOrderEntity::getId).toList();
+        Map<String, List<ObservationEntity>> observationsByOrder = careflow.observationsByOrderIds(orderIds);
+        Map<String, List<Hl7MessageEntity>> hl7ByOrder = careflow.hl7ByOrderIds(orderIds);
+        Double creatinine = careflow.latestCreatinine(orders, observationsByOrder);
         return new PatientChart(
                 patient.getId(),
                 patient.getMrn(),
@@ -108,12 +113,17 @@ public class CareflowController {
                 patient.getAcuity(),
                 encounter.getId(),
                 encounter.getAdmittedAt(),
-                careflow.latestCreatinine(id),
-                careflow.latestEgfr(patient),
+                creatinine,
+                careflow.latestEgfr(patient, creatinine),
                 careflow.allergiesOf(id).stream()
                         .map(allergy -> new AllergyView(allergy.getSubstance(), allergy.getAtcPrefix(), allergy.getCriticality()))
                         .toList(),
-                orders.stream().map(this::toOrder).toList(),
+                orders.stream()
+                        .map(order -> toOrder(
+                                order,
+                                observationsByOrder.getOrDefault(order.getId(), List.of()),
+                                hl7ByOrder.getOrDefault(order.getId(), List.of())))
+                        .toList(),
                 careflow.alertsOf(id).stream()
                         .map(alert -> new AlertView(
                                 alert.getId(), alert.getSeverity(), alert.getRuleId(),
@@ -141,8 +151,9 @@ public class CareflowController {
 
     @GetMapping("/lab/worklist")
     public List<WorklistItem> worklist() {
-        return careflow.labWorklist().stream().map(order -> {
-            PatientEntity patient = careflow.patient(order.getPatientId());
+        return careflow.labWorklistBoard().stream().map(row -> {
+            PatientEntity patient = row.patient();
+            ClinicalOrderEntity order = row.order();
             return new WorklistItem(
                     order.getId(),
                     patient.getId(),
@@ -202,6 +213,13 @@ public class CareflowController {
     }
 
     private OrderView toOrder(ClinicalOrderEntity order) {
+        return toOrder(order, careflow.observationsOf(order.getId()), careflow.hl7Of(order.getId()));
+    }
+
+    private OrderView toOrder(
+            ClinicalOrderEntity order,
+            List<ObservationEntity> observations,
+            List<Hl7MessageEntity> hl7) {
         return new OrderView(
                 order.getId(),
                 order.getPatientId(),
@@ -217,7 +235,7 @@ public class CareflowController {
                 order.getPzn(),
                 order.isBlocked(),
                 order.getHl7ControlId(),
-                careflow.observationsOf(order.getId()).stream()
+                observations.stream()
                         .map(obs -> new ObservationView(
                                 obs.getLoinc(),
                                 obs.getCode(),
@@ -228,7 +246,7 @@ public class CareflowController {
                                 obs.getRefLow() == null ? null : obs.getRefLow().toPlainString(),
                                 obs.getRefHigh() == null ? null : obs.getRefHigh().toPlainString()))
                         .toList(),
-                careflow.hl7Of(order.getId()).stream().map(CareflowController::toHl7).toList());
+                hl7.stream().map(CareflowController::toHl7).toList());
     }
 
     private static Hl7View toHl7(Hl7MessageEntity message) {
