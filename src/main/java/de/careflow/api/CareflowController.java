@@ -12,6 +12,8 @@ import de.careflow.fhir.FhirMapper;
 import de.careflow.security.StaffDirectory;
 import de.careflow.service.AuditService;
 import de.careflow.service.CareflowService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -120,14 +122,14 @@ public class CareflowController {
     }
 
     @PostMapping("/patients/{id}/orders/lab")
-    public OrderView placeLab(@PathVariable String id, @RequestBody CodeRequest request) {
+    public OrderView placeLab(@PathVariable String id, @Valid @RequestBody CodeRequest request) {
         return toOrder(careflow.placeLab(staffDirectory.current(), id, request.code()));
     }
 
     @PostMapping("/patients/{id}/orders/medication")
     public OrderView placeMed(
             @PathVariable String id,
-            @RequestBody MedRequest request) {
+            @Valid @RequestBody MedRequest request) {
         return toOrder(careflow.placeMedication(
                 staffDirectory.current(), id, request.code(), request.override()));
     }
@@ -231,10 +233,10 @@ public class CareflowController {
                 message.getCreatedAt());
     }
 
-    public record CodeRequest(String code) {
+    public record CodeRequest(@NotBlank String code) {
     }
 
-    public record MedRequest(String code, boolean override) {
+    public record MedRequest(@NotBlank String code, boolean override) {
     }
 
     public record WardCard(

@@ -1,5 +1,6 @@
 package de.careflow;
 
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import de.careflow.demo.DemoDataSeeder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -7,11 +8,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -28,6 +36,9 @@ class CareflowApiTest {
 
     @Autowired
     TestRestTemplate rest;
+
+    @LocalServerPort
+    int port;
 
     private MockHttpSession physician;
     private MockHttpSession lab;
@@ -53,10 +64,7 @@ class CareflowApiTest {
                 .andExpect(jsonPath("$.hl7[0].messageType").value("ORM^O01"))
                 .andReturn();
 
-        String orderId = com.fasterxml.jackson.databind.json.JsonMapper.builder().build()
-                .readTree(created.getResponse().getContentAsString())
-                .get("id")
-                .asText();
+        String orderId = jsonId(created);
 
         mvc.perform(post("/api/lab/orders/" + orderId + "/release").session(lab))
                 .andExpect(status().isOk())
@@ -90,6 +98,67 @@ class CareflowApiTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void overlappingLabPanelReturnsConflictWhileTropRemainsAllowed() throws Exception {
+        MvcResult created = mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                        .session(physician)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"BBCRP\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String bbcRpId = jsonId(created);
+        String tropId = null;
+        try {
+            mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                            .session(physician)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"code\":\"BB\"}"))
+                    .andExpect(status().isConflict());
+            mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                            .session(physician)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"code\":\"CRP\"}"))
+                    .andExpect(status().isConflict());
+            tropId = jsonId(mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                            .session(physician)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"code\":\"TROP\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.catalogCode").value("TROP"))
+                    .andReturn());
+        } finally {
+            if (tropId != null) {
+                mvc.perform(post("/api/orders/" + tropId + "/cancel").session(physician))
+                        .andExpect(status().isOk());
+            }
+            mvc.perform(post("/api/orders/" + bbcRpId + "/cancel").session(physician))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    void loginSetsHttpOnlySameSiteLaxCookieWithoutSecure() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://127.0.0.1:" + port + "/api/auth/login"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{\"username\":\"weber\",\"password\":\"demo\"}"))
+                .build();
+        HttpResponse<String> response = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .build()
+                .send(request, HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode()).isEqualTo(200);
+        List<String> setCookie = response.headers().allValues("set-cookie");
+        assertThat(setCookie).isNotEmpty();
+        String cookie = String.join("; ", setCookie);
+        assertThat(cookie).contains("HttpOnly");
+        assertThat(cookie).containsIgnoringCase("SameSite=Lax");
+        boolean secureFlag = java.util.Arrays.stream(cookie.split(";"))
+                .map(String::trim)
+                .anyMatch(part -> part.equalsIgnoreCase("Secure"));
+        assertThat(secureFlag).as("Secure bleibt aus für lokale HTTP-Demo und Vite-Proxy").isFalse();
+    }
+
     private MockHttpSession session(String username) throws Exception {
         MvcResult result = mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -97,5 +166,12 @@ class CareflowApiTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return (MockHttpSession) result.getRequest().getSession(false);
+    }
+
+    private static String jsonId(MvcResult result) throws Exception {
+        return JsonMapper.builder().build()
+                .readTree(result.getResponse().getContentAsString())
+                .get("id")
+                .asText();
     }
 }

@@ -4,6 +4,7 @@ import de.careflow.security.Staff;
 import de.careflow.security.StaffDirectory;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -38,7 +39,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public Staff login(
-            @RequestBody LoginRequest request,
+            @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse) {
         Authentication authentication = authenticationManager.authenticate(

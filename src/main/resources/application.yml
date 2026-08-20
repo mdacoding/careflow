@@ -1,5 +1,11 @@
 server:
   port: ${PORT:8080}
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: false
+        same-site: lax
 
 spring:
   application:
