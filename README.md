@@ -5,7 +5,7 @@ Klinischer **Stationsarbeitsplatz** (CPOE) für das fiktive Musterklinikum Nord:
 Spring-Boot-Backend und React/TypeScript-UI in einem Repository; der UI-Build liegt im JAR unter `/`.
 
 [![CI](https://github.com/mdacoding/careflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mdacoding/careflow/actions/workflows/ci.yml)
-[![Live](https://img.shields.io/badge/Live-Render-1a7a6d)](https://careflow.onrender.com)
+[![Render Free](https://img.shields.io/badge/Deploy-Render%20Free-1a7a6d)](https://render.com/deploy?repo=https://github.com/mdacoding/careflow)
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-brightgreen)
 ![React](https://img.shields.io/badge/React-19-61dafb)
@@ -26,16 +26,18 @@ Kennungen: `weber` Ärztin, `hoffmann` MTA, `schmidt` Pflege — Passwort `demo`
 
 ## Live-Demo
 
-| Einstieg | URL |
-|---|---|
-| Stationsarbeitsplatz | https://careflow.onrender.com |
-| FHIR Patient | https://careflow.onrender.com/fhir/Patient?_format=json |
-| OpenAPI | https://careflow.onrender.com/swagger-ui.html |
-| Health | https://careflow.onrender.com/actuator/health |
-
-Render Free schläft nach Idle; der erste Request dauert länger. H2 startet leer, Seeder legt sechs Fälle an.
+Noch keine öffentliche Instanz: `careflow.onrender.com` antwortet mit 404, solange das Render-Blueprint nicht verbunden ist. Deploy auf Render Free:
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/mdacoding/careflow)
+
+Nach dem Deploy (Render Free schläft nach Idle; erster Request dauert länger; H2 startet leer, Seeder legt sechs Fälle an):
+
+| Einstieg | Pfad |
+|---|---|
+| Stationsarbeitsplatz | `/` |
+| FHIR Patient | `/fhir/Patient?_format=json` |
+| OpenAPI | `/swagger-ui.html` |
+| Health | `/actuator/health` |
 
 ## Tech-Stack
 
@@ -64,7 +66,7 @@ Render Free schläft nach Idle; der erste Request dauert länger. H2 startet lee
 
 **Qualität / Betrieb**
 - JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine, HL7-Roundtrip, API (AMTS-Sperre, RBAC)
-- GitHub Actions: Temurin 21, Node 22, Free Runner
+- GitHub Actions (CI grün): Temurin 21, Node 22, Free Runner
 - Docker Multi-Stage; Render Free, ein Dienst, H2 im Speicher
 
 Kein Kafka, kein Keycloak, keine bezahlte Arzneimittel-DB.
