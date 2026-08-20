@@ -205,6 +205,28 @@ pre {
   background: rgba(233, 196, 106, 0.12);
 }
 .alert.overlap strong { color: var(--warn); }
+.alert.lock {
+  border-color: var(--info);
+  background: rgba(108, 182, 255, 0.12);
+}
+.alert.lock strong { color: var(--info); }
+.nurse-cpoe {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  color: var(--muted);
+  font-size: 13px;
+}
+.flash.flash-warn {
+  color: var(--warn);
+  border: 1px solid var(--warn);
+  background: rgba(233, 196, 106, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.cancelled-row td { color: var(--muted); }
 .renal {
   display: flex;
   flex-wrap: wrap;

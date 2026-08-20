@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, asApiError, isAmtsBlock, isLabOverlap } from "./api";
+import { api, asApiError, isAmtsBlock, isIllegalState, isLabOverlap, isOptimisticLock } from "./api";
 import { AuditLog } from "./AuditLog";
 import { DemoGuide, demoHint } from "./DemoGuide";
 import { interpLabel, StatusChip } from "./StatusChip";
-import type { AuditEvent, Catalog, CdsError, DemoInfo, Hl7View, PatientChart, Staff, WardCard, WorklistItem } from "./types";
+import type { AuditEvent, Catalog, CdsError, DemoInfo, Hl7View, OrderView, PatientChart, Staff, WardCard, WorklistItem } from "./types";
+
+/** CPOE Storno: LAB in PLACED/IN_LAB, MED in ACTIVE. Not BLOCKED, RESULTED, CANCELLED. */
+function isCancellable(order: OrderView): boolean {
+  if (order.kind === "LAB") {
+    return order.status === "PLACED" || order.status === "IN_LAB";
+  }
+  return order.kind === "MEDICATION" && order.status === "ACTIVE";
+}
 
 function formatCreatinine(value: number): string {
   return value.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 2 });
@@ -35,8 +43,10 @@ export default function App() {
   const [fhir, setFhir] = useState("");
   const [selectedHl7, setSelectedHl7] = useState<string>("");
   const [flash, setFlash] = useState("");
+  const [illegalFlash, setIllegalFlash] = useState("");
   const [cds, setCds] = useState<CdsError | null>(null);
   const [labOverlap, setLabOverlap] = useState(false);
+  const [optimisticLock, setOptimisticLock] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function refreshWard() {
@@ -48,6 +58,8 @@ export default function App() {
     if (patient?.id !== id) {
       setCds(null);
       setLabOverlap(false);
+      setOptimisticLock(false);
+      setIllegalFlash("");
     }
     setPatient(chart);
     setView("patient");
@@ -118,6 +130,8 @@ export default function App() {
       setPatient(null);
       setCds(null);
       setLabOverlap(false);
+      setOptimisticLock(false);
+      setIllegalFlash("");
     } else if (username === "hoffmann") {
       setView("lab");
     } else {
@@ -134,6 +148,8 @@ export default function App() {
     try {
       await api.placeLab(patient.id, code);
       setLabOverlap(false);
+      setOptimisticLock(false);
+      setIllegalFlash("");
       setFlash(
         code === "BBCRP"
           ? "Laborauftrag übermittelt — HL7 ORM^O01 und ACK liegen im Interop-Log."
@@ -144,8 +160,17 @@ export default function App() {
       }
       await refreshContext();
     } catch (error) {
-      if (isLabOverlap(error)) {
+      if (isOptimisticLock(error)) {
+        setOptimisticLock(true);
+        setLabOverlap(false);
+        setIllegalFlash("");
+        setFlash("");
+      } else if (isLabOverlap(error)) {
         setLabOverlap(true);
+        setOptimisticLock(false);
+        setFlash("");
+      } else if (isIllegalState(error)) {
+        setIllegalFlash(asApiError(error).message);
         setFlash("");
       } else {
         setFlash(asApiError(error).message);
@@ -191,7 +216,15 @@ export default function App() {
           alerts: parsed.alerts,
         });
         setFlash("");
+        setOptimisticLock(false);
         setStep(5);
+      } else if (isOptimisticLock(error)) {
+        setOptimisticLock(true);
+        setFlash("");
+        setIllegalFlash("");
+      } else if (isIllegalState(error)) {
+        setIllegalFlash(asApiError(error).message);
+        setFlash("");
       } else {
         setFlash(asApiError(error).message);
       }
@@ -210,6 +243,8 @@ export default function App() {
       await api.placeMed(patient.id, "CEFU");
       setCds(null);
       setFlash("Cefuroxim verordnet — AMTS: Kreuzallergie β-Laktam als Hinweis (kein Block).");
+      setIllegalFlash("");
+      setOptimisticLock(false);
       setStep(6);
       await refreshContext();
     } catch (error) {
@@ -220,6 +255,14 @@ export default function App() {
           message: parsed.message,
           alerts: parsed.alerts,
         });
+        setFlash("");
+        setOptimisticLock(false);
+      } else if (isOptimisticLock(error)) {
+        setOptimisticLock(true);
+        setFlash("");
+        setIllegalFlash("");
+      } else if (isIllegalState(error)) {
+        setIllegalFlash(asApiError(error).message);
         setFlash("");
       } else {
         setFlash(asApiError(error).message);
@@ -237,6 +280,8 @@ export default function App() {
     try {
       await api.placeMed(patient.id, code);
       setFlash("Verordnung aktiv.");
+      setIllegalFlash("");
+      setOptimisticLock(false);
       await refreshContext();
     } catch (error) {
       if (isAmtsBlock(error)) {
@@ -247,6 +292,44 @@ export default function App() {
           alerts: parsed.alerts,
         });
         setFlash("");
+        setOptimisticLock(false);
+      } else if (isOptimisticLock(error)) {
+        setOptimisticLock(true);
+        setFlash("");
+        setIllegalFlash("");
+      } else if (isIllegalState(error)) {
+        setIllegalFlash(asApiError(error).message);
+        setFlash("");
+      } else {
+        setFlash(asApiError(error).message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelOrder(orderId: string) {
+    if (!patient) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.cancel(orderId);
+      setOptimisticLock(false);
+      setIllegalFlash("");
+      setFlash("Auftrag storniert.");
+      await refreshContext();
+    } catch (error) {
+      if (isOptimisticLock(error)) {
+        setOptimisticLock(true);
+        setLabOverlap(false);
+        setIllegalFlash("");
+        setFlash("");
+        await refreshContext();
+      } else if (isIllegalState(error)) {
+        setIllegalFlash(asApiError(error).message);
+        setFlash("");
+        await refreshContext();
       } else {
         setFlash(asApiError(error).message);
       }
@@ -347,6 +430,7 @@ export default function App() {
             <span>{hint}</span>
           </div>
           {flash && <p className="flash">{flash}</p>}
+          {illegalFlash && <p className="flash flash-warn">{illegalFlash}</p>}
           {view === "ward" && (
             <>
               <section className="stats">
@@ -443,6 +527,9 @@ export default function App() {
                     )}
                   </div>
                 )}
+                {staff.role === "NURSE" && (
+                  <p className="nurse-cpoe">Pflege hat kein CPOE (nur Lesen).</p>
+                )}
                 {staff.role !== "PHYSICIAN" && patient.demoStar && step >= 4 && (
                   <div className="row" style={{ marginTop: 12 }}>
                     <button className="primary" onClick={() => void enter("weber")}>
@@ -466,6 +553,24 @@ export default function App() {
                     Ein offener Laborauftrag deckt dieselbe Messung bereits ab (BBCRP umfasst Blutbild und CRP). Der
                     zweite Auftrag wird nicht angenommen.
                   </p>
+                </section>
+              )}
+              {optimisticLock && (
+                <section className="alert lock">
+                  <div className="kicker">HTTP 409 · Optimistic Lock</div>
+                  <strong>Auftrag wurde parallel geändert</strong>
+                  <p>Auftrag wurde parallel geändert, bitte neu laden.</p>
+                  <div className="row">
+                    <button
+                      className="primary"
+                      onClick={() => {
+                        setOptimisticLock(false);
+                        void refreshContext();
+                      }}
+                    >
+                      Akte neu laden
+                    </button>
+                  </div>
                 </section>
               )}
               {cds && (
@@ -545,11 +650,21 @@ export default function App() {
                         <th>Auftrag</th>
                         <th>Status</th>
                         <th>Werte</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
                       {patient.orders.map((order) => (
-                        <tr key={order.id} className={order.status === "BLOCKED" ? "blocked-row" : ""}>
+                        <tr
+                          key={order.id}
+                          className={
+                            order.status === "BLOCKED"
+                              ? "blocked-row"
+                              : order.status === "CANCELLED"
+                                ? "cancelled-row"
+                                : ""
+                          }
+                        >
                           <td>
                             {order.displayName}
                             <div className="muted">
@@ -569,6 +684,18 @@ export default function App() {
                                 {obs.display} {obs.value} {obs.unit} · {interpLabel(obs.interpretation)}
                               </div>
                             ))}
+                          </td>
+                          <td>
+                            {staff.role === "PHYSICIAN" && isCancellable(order) && (
+                              <button
+                                className="ghost"
+                                disabled={busy}
+                                title="Auftrag stornieren"
+                                onClick={() => void cancelOrder(order.id)}
+                              >
+                                Stornieren
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

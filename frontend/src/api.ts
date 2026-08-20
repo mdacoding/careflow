@@ -34,6 +34,18 @@ export function isAmtsBlock(error: unknown): boolean {
   return asApiError(error).code === "CDS_BLOCK";
 }
 
+/** HTTP 409: another session changed the same order (@Version). Not AMTS, not lab-panel overlap. */
+export function isOptimisticLock(error: unknown): boolean {
+  const { status, code } = asApiError(error);
+  return status === 409 && code === "OPTIMISTIC_LOCK";
+}
+
+/** HTTP 422: CPOE state machine rejected the transition. */
+export function isIllegalState(error: unknown): boolean {
+  const { status, code } = asApiError(error);
+  return status === 422 || code === "ILLEGAL_STATE";
+}
+
 /** HTTP 409 on lab CPOE: open order already covers the same analytes (BBCRP ⊃ BB/CRP). */
 export function isLabOverlap(error: unknown): boolean {
   const { status, code } = asApiError(error);
@@ -80,6 +92,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ code, override }),
     }),
+  cancel: (orderId: string) => request<OrderView>(`/api/orders/${orderId}/cancel`, { method: "POST" }),
   worklist: () => request<WorklistItem[]>("/api/lab/worklist"),
   acceptLab: (id: string) => request<OrderView>(`/api/lab/orders/${id}/accept`, { method: "POST" }),
   releaseLab: (id: string) => request<OrderView>(`/api/lab/orders/${id}/release`, { method: "POST" }),
