@@ -415,11 +415,11 @@ class CareflowApiTest {
     @Test
     void corsAllowsRenderOriginOnHealth() {
         HttpHeaders headers = new HttpHeaders();
-        headers.add("Origin", "https://careflow.onrender.com");
+        headers.add("Origin", "https://careflow-1-s5lg.onrender.com");
         ResponseEntity<String> health = rest.exchange(
                 "/actuator/health", HttpMethod.GET, new HttpEntity<>(headers), String.class);
         assertThat(health.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(health.getHeaders().getAccessControlAllowOrigin()).isEqualTo("https://careflow.onrender.com");
+        assertThat(health.getHeaders().getAccessControlAllowOrigin()).isEqualTo("https://careflow-1-s5lg.onrender.com");
         assertThat(health.getHeaders().getAccessControlAllowCredentials()).isTrue();
     }
 
@@ -429,7 +429,7 @@ class CareflowApiTest {
         assertThat(html).contains("og:title");
         assertThat(html).contains("Careflow");
         assertThat(html).contains("Musterklinikum Nord");
-        assertThat(html).contains("https://github.com/mdacoding/careflow");
+        assertThat(html).contains("https://careflow-1-s5lg.onrender.com");
         assertThat(html).contains("index,follow");
     }
 
