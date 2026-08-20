@@ -152,23 +152,29 @@ export default function App() {
   const hint = demoHint(step, view, staff?.role ?? "", labOverlap);
 
   async function enter(username: string, startDemo = false) {
-    const session = await api.login(username);
-    setStaff(session);
-    setDemo(await api.demo());
-    if (startDemo) {
-      setStep(1);
-      setView("ward");
-      setPatient(null);
-      setCds(null);
-      setLabOverlap(false);
-      setOptimisticLock(false);
-      setIllegalFlash("");
-    } else if (username === "hoffmann") {
-      setView("lab");
-    } else {
-      setView(patient ? "patient" : "ward");
+    try {
+      const session = await api.login(username);
+      setStaff(session);
+      setDemo(await api.demo());
+      if (startDemo) {
+        setStep(1);
+        setView("ward");
+        setPatient(null);
+        setCds(null);
+        setLabOverlap(false);
+        setOptimisticLock(false);
+        setIllegalFlash("");
+      } else if (username === "hoffmann") {
+        setView("lab");
+      } else {
+        setView(patient ? "patient" : "ward");
+      }
+      setFlash(`Angemeldet als ${session.displayName}`);
+    } catch (error) {
+      const parsed = asApiError(error);
+      const generic = !parsed.message || parsed.message === "Unauthorized" || parsed.message === "Forbidden";
+      setFlash(generic ? "Anmeldung fehlgeschlagen" : parsed.message);
     }
-    setFlash(`Angemeldet als ${session.displayName}`);
   }
 
   async function placeLab(code: string) {
@@ -262,6 +268,43 @@ export default function App() {
     } finally {
       setBusy(false);
       await refreshContext();
+    }
+  }
+
+  async function overrideAmts() {
+    if (!patient) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.placeMed(patient.id, demo?.blockMed ?? "AMOX", true);
+      setFlash("Verordnung als AMTS-Override dokumentiert — nicht freigegeben.");
+      setIllegalFlash("");
+      setOptimisticLock(false);
+      await refreshContext();
+    } catch (error) {
+      if (isAmtsBlock(error)) {
+        const parsed = asApiError(error);
+        setCds({
+          error: "CDS_BLOCK",
+          message: parsed.message,
+          alerts: parsed.alerts,
+        });
+        setFlash("");
+        setOptimisticLock(false);
+      } else if (isOptimisticLock(error)) {
+        setOptimisticLock(true);
+        setFlash("");
+        setIllegalFlash("");
+      } else if (isIllegalState(error)) {
+        setIllegalFlash(asApiError(error).message);
+        setFlash("");
+      } else {
+        setFlash(asApiError(error).message);
+      }
+      await refreshContext();
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -379,6 +422,11 @@ export default function App() {
             Klinischer Stationsarbeitsplatz: CPOE, Laborbefund, AMTS, HL7 v2 ORM/ORU, FHIR R4. Synthetische Demodaten.
             Passwort überall <code>demo</code>.
           </p>
+          {flash && (
+            <p className="flash flash-warn" role="status" aria-live="polite">
+              {flash}
+            </p>
+          )}
           <div className="login-grid">
             <button className="staff" onClick={() => void enter("weber", true)}>
               <span className="kicker">5-Minuten-Demo</span>
@@ -636,6 +684,13 @@ export default function App() {
                   <div className="row">
                     <button className="primary" onClick={() => void orderCefu()} disabled={busy || staff.role !== "PHYSICIAN"}>
                       Stattdessen Cefuroxim (J01D)
+                    </button>
+                    <button
+                      className="quiet"
+                      onClick={() => void overrideAmts()}
+                      disabled={busy || staff.role !== "PHYSICIAN"}
+                    >
+                      Sperre dokumentiert überschreiben
                     </button>
                   </div>
                 </section>

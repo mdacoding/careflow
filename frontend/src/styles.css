@@ -64,6 +64,17 @@ button { cursor: pointer; }
 .brand small { color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; }
 .brand h1 { margin: 0; font-size: 18px; font-weight: 650; }
 .nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.quiet {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 8px 6px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.quiet:hover:not(:disabled) { color: var(--ink); }
+.quiet:disabled { opacity: 0.55; cursor: not-allowed; }
 .nav button, .ghost, .primary, .danger, .warn {
   border: 1px solid var(--line);
   background: transparent;
@@ -135,6 +146,7 @@ main { padding: 22px; display: grid; gap: 16px; align-content: start; }
   box-shadow: var(--shadow);
 }
 .login-card h1 { margin: 6px 0 8px; }
+.login-card .flash { margin: 12px 0 0; }
 .login-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
 .staff {
   text-align: left;
