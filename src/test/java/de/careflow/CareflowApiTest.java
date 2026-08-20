@@ -89,6 +89,12 @@ class CareflowApiTest {
     }
 
     @Test
+    void websocketIsNotAnonymous() throws Exception {
+        mvc.perform(get("/api/ws"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void nurseCannotOrderMedication() throws Exception {
         MockHttpSession nurse = session("schmidt");
         mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/medication")
@@ -115,7 +121,10 @@ class CareflowApiTest {
                     .andExpect(status().isForbidden());
             mvc.perform(post("/api/orders/" + bbcRpId + "/cancel").session(physician))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("CANCELLED"));
+                    .andExpect(jsonPath("$.status").value("CANCELLED"))
+                    .andExpect(jsonPath("$.hl7[*].messageType").value(org.hamcrest.Matchers.hasItem("ORM^O01")))
+                    .andExpect(jsonPath("$.hl7[*].raw").value(
+                            org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("ORC|CA"))));
             bbId = jsonId(mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
                             .session(physician)
                             .contentType(MediaType.APPLICATION_JSON)
