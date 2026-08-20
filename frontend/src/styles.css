@@ -27,6 +27,12 @@ body {
 
 button, select, input { font: inherit; }
 button { cursor: pointer; }
+button:focus-visible,
+a:focus-visible,
+.hl7-row:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
 
 .app { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
 .app > header {
@@ -170,7 +176,15 @@ main { padding: 22px; display: grid; gap: 16px; align-content: start; }
 .stat strong { display: block; font-size: 26px; }
 .stat span, .muted { color: var(--muted); font-size: 13px; }
 .beds { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.bed { cursor: pointer; display: grid; gap: 8px; }
+.bed {
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
 .bed:hover, .bed.star { border-color: var(--teal); }
 .bed header { display: flex; justify-content: space-between; gap: 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -195,12 +209,14 @@ main { padding: 22px; display: grid; gap: 16px; align-content: start; }
 }
 .chip.status-CANCELLED { color: var(--muted); }
 .msh-route {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-  margin-top: 2px;
+  display: inline;
+  color: var(--ink);
+  font-size: 12px;
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
+.hl7-row { cursor: pointer; }
+.hl7-row:focus { background: rgba(46, 196, 182, 0.08); }
 
 .split { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 12px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }

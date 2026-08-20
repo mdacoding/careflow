@@ -107,6 +107,37 @@ class CareflowApiTest {
     }
 
     @Test
+    void nurseCannotPlaceLabOrAcceptOrRelease() throws Exception {
+        MockHttpSession nurse = session("schmidt");
+        mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                        .session(nurse)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"TROP\"}"))
+                .andExpect(status().isForbidden());
+
+        MvcResult created = mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                        .session(physician)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"TROP\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PLACED"))
+                .andReturn();
+        String orderId = jsonId(created);
+        try {
+            mvc.perform(post("/api/lab/orders/" + orderId + "/accept").session(nurse))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post("/api/lab/orders/" + orderId + "/release").session(nurse))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post("/api/lab/orders/" + orderId + "/accept").session(lab))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("IN_LAB"));
+        } finally {
+            mvc.perform(post("/api/orders/" + orderId + "/cancel").session(physician))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
     void physicianCanCancelPlacedLabButNurseCannot() throws Exception {
         MockHttpSession nurse = session("schmidt");
         MvcResult created = mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")

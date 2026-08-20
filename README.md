@@ -85,6 +85,9 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 **Frontend**
 - React 19, TypeScript, Vite 6
 - Views: Login, Stationsboard, Akte, Labor-Worklist, Interop
+- RBAC in der Oberfläche: Pflege ohne CPOE- und Labor-Aktionen (nicht nur API 403); Labor ohne Anordnung
+- Stationsboard und Interop-Log tastaturbedienbar (`aria-current`, Fokusring)
+- Interop: eigene Spalte MSH (CAREFLOW ↔ LABSYS) plus ORC-Chips (NW/SC/CA/CM; ACK ohne ORC)
 - Produktionsbuild im selben JAR (`npm run build:spring`)
 - WebSocket-Ereignisse in der UI nur mit Session; HL7-Storno als ORM CA
 
@@ -93,7 +96,7 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 - CSRF absichtlich aus (Cookie-SPA + Vite-Proxy); Session HttpOnly + SameSite=Lax
 - WebSocket-Origins: localhost und `https://*.onrender.com` (kein `*`)
 - Demo-Session: 8 Stunden
-- JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, Override `BLOCKED`/`overridden`, VALIDATION 400, RBAC, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR Search/Read ohne Create, CapabilityStatement)
+- JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, Override `BLOCKED`/`overridden`, VALIDATION 400, RBAC Pflege ohne CPOE/Laborannahme/Freigabe, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR Search/Read ohne Create, CapabilityStatement)
 - GitHub Actions (CI grün): Temurin 21, Node 22, Free Runner
 - Docker Multi-Stage; Render Free, ein Dienst, H2 im Speicher
 - Live-URL `careflow.onrender.com` bleibt 404, bis das Render-Blueprint verbunden ist

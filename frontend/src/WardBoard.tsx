@@ -21,9 +21,15 @@ export function WardBoard({ ward, onOpen }: { ward: WardCard[]; onOpen: (id: str
           <span>pathologische Befunde</span>
         </article>
       </section>
-      <section className="beds">
+      <section className="beds" aria-label="Betten Station Innere 3">
         {ward.map((card) => (
-          <article key={card.id} className={card.demoStar ? "bed star" : "bed"} onClick={() => onOpen(card.id)}>
+          <button
+            key={card.id}
+            type="button"
+            className={card.demoStar ? "bed star" : "bed"}
+            onClick={() => onOpen(card.id)}
+            aria-label={`Akte ${card.displayName}, Bett ${card.bed}${card.demoStar ? ", Demo-Fall" : ""}`}
+          >
             <header>
               <div>
                 <div className="kicker">
@@ -47,7 +53,7 @@ export function WardBoard({ ward, onOpen }: { ward: WardCard[]; onOpen: (id: str
               {card.openLabs > 0 && <span className="chip warn">{card.openLabs} Labor offen</span>}
               {card.criticalResult && <span className="chip high">Befund pathologisch</span>}
             </div>
-          </article>
+          </button>
         ))}
       </section>
     </>

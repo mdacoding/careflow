@@ -458,15 +458,27 @@ export default function App() {
               <h1>Careflow</h1>
             </div>
           </div>
-          <nav className="nav">
-            <button className={view === "ward" ? "active" : ""} onClick={() => setView("ward")}>
+          <nav className="nav" aria-label="Arbeitsplatz">
+            <button
+              type="button"
+              className={view === "ward" || view === "patient" ? "active" : ""}
+              aria-current={view === "ward" || view === "patient" ? "page" : undefined}
+              onClick={() => setView("ward")}
+            >
               Station
             </button>
-            <button className={view === "lab" ? "active" : ""} onClick={() => setView("lab")}>
+            <button
+              type="button"
+              className={view === "lab" ? "active" : ""}
+              aria-current={view === "lab" ? "page" : undefined}
+              onClick={() => setView("lab")}
+            >
               Labor
             </button>
             <button
+              type="button"
               className={view === "interop" ? "active" : ""}
+              aria-current={view === "interop" ? "page" : undefined}
               onClick={() => {
                 setView("interop");
                 setStep(6);
@@ -482,13 +494,15 @@ export default function App() {
               {ROLES.map((role) => (
                 <button
                   key={role.username}
+                  type="button"
                   className={staff.username === role.username ? "primary" : "ghost"}
+                  aria-pressed={staff.username === role.username}
                   onClick={() => void enter(role.username)}
                 >
                   {role.label}
                 </button>
               ))}
-              <button className="ghost" onClick={() => void api.logout().then(() => setStaff(null))}>
+              <button type="button" className="ghost" onClick={() => void api.logout().then(() => setStaff(null))}>
                 Abmelden
               </button>
             </div>

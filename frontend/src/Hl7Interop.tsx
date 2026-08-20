@@ -13,7 +13,7 @@ const ORC_CHIP: Record<string, string> = {
 };
 
 /** First `ORC|XX` in the raw HL7 pipe message. ACK has no ORC segment. */
-function parseOrcControl(raw: string): string | undefined {
+export function parseOrcControl(raw: string): string | undefined {
   return /ORC\|([A-Z]{2})/.exec(raw)?.[1];
 }
 
@@ -51,7 +51,7 @@ export function OrcChip({ raw }: { raw: string }) {
   const code = parseOrcControl(raw);
   const label = code ? ORC_LABEL[code] : undefined;
   if (!code || !label) {
-    return null;
+    return <span className="muted">ACK ohne ORC</span>;
   }
   return <span className={`chip ${ORC_CHIP[code] ?? ""}`}>{label}</span>;
 }
@@ -59,7 +59,7 @@ export function OrcChip({ raw }: { raw: string }) {
 export function MshRoute({ raw }: { raw: string }) {
   const label = mshRouteLabel(raw);
   if (!label) {
-    return null;
+    return <span className="muted">—</span>;
   }
-  return <div className="msh-route">{label}</div>;
+  return <span className="msh-route">{label}</span>;
 }

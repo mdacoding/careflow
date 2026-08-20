@@ -98,17 +98,26 @@ export function PatientView({
             )}
           </div>
         )}
-        {role === "NURSE" && <p className="nurse-cpoe">Pflege hat kein CPOE (nur Lesen).</p>}
+        {role === "NURSE" && (
+          <p className="nurse-cpoe" role="status">
+            Pflege hat kein CPOE (nur Lesen, RBAC).
+          </p>
+        )}
+        {role === "LAB" && (
+          <p className="nurse-cpoe" role="status">
+            Labor hat kein CPOE — Anordnung nur als Ärztin (RBAC).
+          </p>
+        )}
         {role !== "PHYSICIAN" && patient.demoStar && step >= 4 && (
           <div className="row" style={{ marginTop: 12 }}>
-            <button className="primary" onClick={() => onEnter("weber")}>
+            <button type="button" className="primary" onClick={() => onEnter("weber")}>
               Als Ärztin weiter (AMTS)
             </button>
           </div>
         )}
         {role === "PHYSICIAN" && patient.demoStar && step === 3 && (
           <div className="row" style={{ marginTop: 12 }}>
-            <button className="primary" onClick={() => onEnter("hoffmann")}>
+            <button type="button" className="primary" onClick={() => onEnter("hoffmann")}>
               Rolle Labor — Befund freigeben
             </button>
           </div>
@@ -130,7 +139,7 @@ export function PatientView({
           <strong>Auftrag wurde parallel geändert</strong>
           <p>Auftrag wurde parallel geändert, bitte neu laden.</p>
           <div className="row">
-            <button className="primary" onClick={onReload}>
+            <button type="button" className="primary" onClick={onReload}>
               Akte neu laden
             </button>
           </div>
@@ -152,10 +161,10 @@ export function PatientView({
             ))}
           </div>
           <div className="row">
-            <button className="primary" onClick={onOrderCefu} disabled={busy || role !== "PHYSICIAN"}>
+            <button type="button" className="primary" onClick={onOrderCefu} disabled={busy || role !== "PHYSICIAN"}>
               Stattdessen Cefuroxim (J01D)
             </button>
-            <button className="quiet" onClick={onOverrideAmts} disabled={busy || role !== "PHYSICIAN"}>
+            <button type="button" className="quiet" onClick={onOverrideAmts} disabled={busy || role !== "PHYSICIAN"}>
               Sperre dokumentiert überschreiben
             </button>
           </div>
@@ -171,42 +180,53 @@ export function PatientView({
         ))}
       <section className="split">
         <article className="card">
-          <h3>Laborauftrag (CPOE)</h3>
-          <p className="muted">
-            Arzt löst ORM^O01 aus; das Labor antwortet mit ACK und später ORU^R01. Offene Doppelaufträge und
-            überlappende Panels (BBCRP ⊃ BB/CRP) enden mit HTTP 409.
-          </p>
-          <div className="row">
-            {catalog?.labs.map((item) => (
-              <button
-                key={item.code}
-                className={item.code === "BBCRP" ? "primary" : "ghost"}
-                disabled={busy || role !== "PHYSICIAN"}
-                onClick={() => onPlaceLab(item.code)}
-              >
-                {item.display}
-              </button>
-            ))}
-          </div>
-          <h3>Verordnung (AMTS)</h3>
-          <p className="muted">Allergie-Match gegen Penicillin (ATC J01C) ist eine harte AMTS-Sperre (HTTP 409).</p>
-          <div className="row">
-            <button className="danger" disabled={busy || role !== "PHYSICIAN"} onClick={onTryAmox}>
-              Amoxicillin — Allergie-Check
-            </button>
-            {catalog?.meds
-              .filter((item) => item.code !== "AMOX")
-              .map((item) => (
-                <button
-                  key={item.code}
-                  className="ghost"
-                  disabled={busy || role !== "PHYSICIAN"}
-                  onClick={() => (item.code === "CEFU" ? onOrderCefu() : onPlaceOtherMed(item.code))}
-                >
-                  {item.display}
+          {role === "PHYSICIAN" ? (
+            <>
+              <h3>Laborauftrag (CPOE)</h3>
+              <p className="muted">
+                Arzt löst ORM^O01 aus; das Labor antwortet mit ACK und später ORU^R01. Offene Doppelaufträge und
+                überlappende Panels (BBCRP ⊃ BB/CRP) enden mit HTTP 409.
+              </p>
+              <div className="row">
+                {catalog?.labs.map((item) => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    className={item.code === "BBCRP" ? "primary" : "ghost"}
+                    disabled={busy}
+                    onClick={() => onPlaceLab(item.code)}
+                  >
+                    {item.display}
+                  </button>
+                ))}
+              </div>
+              <h3>Verordnung (AMTS)</h3>
+              <p className="muted">Allergie-Match gegen Penicillin (ATC J01C) ist eine harte AMTS-Sperre (HTTP 409).</p>
+              <div className="row">
+                <button type="button" className="danger" disabled={busy} onClick={onTryAmox}>
+                  Amoxicillin — Allergie-Check
                 </button>
-              ))}
-          </div>
+                {catalog?.meds
+                  .filter((item) => item.code !== "AMOX")
+                  .map((item) => (
+                    <button
+                      key={item.code}
+                      type="button"
+                      className="ghost"
+                      disabled={busy}
+                      onClick={() => (item.code === "CEFU" ? onOrderCefu() : onPlaceOtherMed(item.code))}
+                    >
+                      {item.display}
+                    </button>
+                  ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <h3>Auftragswesen</h3>
+              <p className="muted">CPOE und Verordnung sind der Rolle Ärztin vorbehalten. Die Akte bleibt lesbar.</p>
+            </>
+          )}
         </article>
         <article className="card">
           <h3>Aufträge und Befunde</h3>
@@ -250,6 +270,7 @@ export function PatientView({
                   <td>
                     {role === "PHYSICIAN" && isCancellable(order.kind, order.status) && (
                       <button
+                        type="button"
                         className="ghost"
                         disabled={busy}
                         title="Auftrag stornieren"

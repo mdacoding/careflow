@@ -20,20 +20,20 @@ export function LoginScreen({
           </p>
         )}
         <div className="login-grid">
-          <button className="staff" onClick={() => onEnter("weber", true)}>
+          <button type="button" className="staff" onClick={() => onEnter("weber", true)}>
             <span className="kicker">5-Minuten-Demo</span>
             <b>Dr. med. Lena Weber</b>
             <span className="muted">Oberärztin — führt den Demo-Fall Elena Krüger</span>
           </button>
-          <button className="staff" onClick={() => onEnter("hoffmann")}>
+          <button type="button" className="staff" onClick={() => onEnter("hoffmann")}>
             <span className="kicker">Labor</span>
             <b>Tim Hoffmann</b>
             <span className="muted">MTA — Worklist, Annahme, Befundfreigabe</span>
           </button>
-          <button className="staff" onClick={() => onEnter("schmidt")}>
+          <button type="button" className="staff" onClick={() => onEnter("schmidt")}>
             <span className="kicker">Pflege</span>
             <b>Paula Schmidt</b>
-            <span className="muted">Station — lesend, ohne CPOE</span>
+            <span className="muted">Station — lesend, ohne CPOE (RBAC)</span>
           </button>
         </div>
       </div>

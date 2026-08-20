@@ -58,6 +58,7 @@ export function DemoGuide({
           <li
             key={text}
             className={index === current && step < list.length ? "current" : index < step ? "done" : ""}
+            aria-current={index === current && step < list.length ? "step" : undefined}
           >
             {text}
           </li>

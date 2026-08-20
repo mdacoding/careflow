@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { AuditLog } from "./AuditLog";
 import { MshRoute, OrcChip } from "./Hl7Interop";
 import type { AuditEvent, Hl7View } from "./types";
@@ -19,18 +20,30 @@ export function InteropView({
   onSelectHl7: (id: string) => void;
   onLoadFhir: (id: string) => void;
 }) {
+  function selectRow(event: KeyboardEvent<HTMLTableRowElement>, id: string) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelectHl7(id);
+    }
+  }
+
   return (
     <>
       <p className="muted">Audit nach CPOE, AMTS und Labor — jede Aktion im Protokoll darunter.</p>
       <section className="split">
         <article className="card">
           <h2>HL7 v2 (ORM / ORU / ACK)</h2>
-          <table>
+          <p className="muted">
+            MSH-3 sendende App, MSH-5 empfangende App: Ausgang <code>CAREFLOW → LABSYS</code>, Eingang{" "}
+            <code>LABSYS → CAREFLOW</code>. ORC: NW neu, SC in Analytik, CA storniert, CM befundet. ACK ohne ORC.
+          </p>
+          <table aria-label="HL7 v2 Nachrichten ORM ORU ACK">
             <thead>
               <tr>
                 <th>Zeit</th>
                 <th>Richtung</th>
                 <th>Typ</th>
+                <th>MSH</th>
                 <th>ORC</th>
               </tr>
             </thead>
@@ -38,14 +51,18 @@ export function InteropView({
               {messages.map((message) => (
                 <tr
                   key={message.id}
-                  className={liveHl7?.id === message.id ? "demo-row" : ""}
+                  className={liveHl7?.id === message.id ? "demo-row hl7-row" : "hl7-row"}
+                  tabIndex={0}
+                  aria-current={liveHl7?.id === message.id ? "true" : undefined}
                   onClick={() => onSelectHl7(message.id)}
-                  style={{ cursor: "pointer" }}
+                  onKeyDown={(event) => selectRow(event, message.id)}
                 >
                   <td>{new Date(message.createdAt).toLocaleTimeString("de-DE")}</td>
                   <td>{message.direction === "OUTBOUND" ? "Ausgang" : "Eingang"}</td>
                   <td>
                     {message.messageType} {message.ackCode ?? ""}
+                  </td>
+                  <td>
                     <MshRoute raw={message.raw} />
                   </td>
                   <td>
@@ -64,7 +81,7 @@ export function InteropView({
           </p>
           <div className="row">
             {patientId && (
-              <button className="primary" onClick={() => onLoadFhir(patientId)}>
+              <button type="button" className="primary" onClick={() => onLoadFhir(patientId)}>
                 FHIR-Bundle laden
               </button>
             )}
