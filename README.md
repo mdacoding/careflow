@@ -8,9 +8,10 @@ Unabhängige Fullstack-Anwendung: Spring-Boot-Backend und React/TypeScript-UI im
 [![Live](https://img.shields.io/badge/Live-Render-1a7a6d)](https://careflow.onrender.com)
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-brightgreen)
+![Spring Security](https://img.shields.io/badge/Spring%20Security-session%2FRBAC-6db33f)
 ![React](https://img.shields.io/badge/React-19-61dafb)
-![FHIR](https://img.shields.io/badge/FHIR-R4-0f4c5c)
-![HL7](https://img.shields.io/badge/HL7-v2%20ORM%2FORU-0f4c5c)
+![FHIR](https://img.shields.io/badge/HAPI%20FHIR-R4-0f4c5c)
+![HL7](https://img.shields.io/badge/HAPI%20HL7-v2.5%20ORM%2FORU-0f4c5c)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ## 5-Minuten-Demo
@@ -39,24 +40,34 @@ Render Free schläft nach Inaktivität; der erste Request danach dauert länger.
 
 ## Tech-Stack
 
+Der Stack trifft typische Anforderungen in KIS-/DIZ- und Schnittstellen-Teams: FHIR-R4-REST, HL7-v2-Nachrichten, Session-Security mit Rollen und automatisierte Tests — ohne ungenutzte Middleware.
+
 **Backend**
-- Java 21, Spring Boot 3.4 (Web, WebSocket, Security, Data JPA, Validation, Actuator)
-- HAPI FHIR 7.6 (R4 RestfulServer) und HAPI HL7 v2.5 (`ORM^O01`, `ORU^R01`, `ACK`)
-- Eigene AMTS-Regelengine (Allergie, Kreuzreaktion, Doppel-ATC, NSAR)
-- Flyway, Hibernate; H2 im Demo-Betrieb, PostgreSQL 16 lokal per Docker Compose
-- springdoc-openapi
+- Java 21, Spring Boot 3.4.5 (Web, WebSocket, Security, Data JPA, Validation, Actuator)
+- Spring Security: Session-Cookie (`HttpSessionSecurityContextRepository`), In-Memory-UserDetails, Rollen `PHYSICIAN` / `LAB` / `NURSE`; fachliche RBAC in der Service-Schicht
+- Spring Data JPA / Hibernate (`ddl-auto: validate`), Flyway; H2 im Demo-Betrieb, PostgreSQL 16 lokal per Docker Compose
+- Native WebSocket unter `/api/ws` (kein STOMP)
+- springdoc-openapi 2.8 (Swagger UI)
+- Eigene AMTS-Regelengine (Allergie, Cephalosporin-Kreuzreaktion, Doppel-ATC, NSAR)
 
 **Frontend**
-- React 19, TypeScript, Vite 6 in `frontend/`
-- Produktionsbuild im selben Spring-JAR unter `/`
+- React 19, TypeScript 5.8, Vite 6 in `frontend/`
+- Session-Cookie (`credentials: include`), Vite-Proxy auf `/api` und `/fhir`, Browser-WebSocket
+- Produktionsbuild im selben Spring-JAR unter `/` — ein Dienst, kein zweites Frontend-Hosting
 
-**Tests / CI**
-- JUnit 5: Regelengine, Zustandsmaschine, HL7-Roundtrip, API inkl. AMTS-Sperre
+**Interop**
+- HAPI FHIR 7.6 (`RestfulServer`, `FhirContext.forR4()`): Search/Read unter `/fhir` für Patient, Encounter, AllergyIntolerance, ServiceRequest, Observation, DiagnosticReport, MedicationRequest
+- HAPI HL7 v2.5 (`hapi-structures-v25`, `PipeParser`): `ORM^O01` (Laborauftrag), `ORU^R01` (Befund mit LOINC/OBX), `ACK` (MSA AA)
+- FHIR-Bundle derselben Akte über die Careflow-API; FHIR ist Projektion, kein zweites Wahrheitssystem
+
+**Qualität**
+- JUnit 5, MockMvc, TestRestTemplate, AssertJ
+- Abgedeckt: AMTS-Regeln, Auftrags-Zustandsmaschine, HL7-Parse/Encode-Roundtrip, API inkl. AMTS-Sperre (HTTP 409)
 - GitHub Actions: Backend `./mvnw -B test` (Temurin 21), Frontend `npm ci && npm run build` (Node 22)
 
 **Betrieb**
-- Docker Multi-Stage: Node 22 baut die UI, Maven (Temurin 21) packt das JAR
-- Render Free: ein Web-Service aus dem Dockerfile, H2 im Speicher
+- Docker Multi-Stage: Node 22 baut die UI, Maven (Temurin 21) packt das JAR, Runtime `eclipse-temurin:21-jre-alpine`
+- Render Free: ein Web-Service aus dem Dockerfile, H2 im Speicher, Health unter `/actuator/health`
 
 ## Architektur
 
