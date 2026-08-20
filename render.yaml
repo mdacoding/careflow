@@ -9,4 +9,6 @@ services:
     autoDeploy: true
     envVars:
       - key: JAVA_TOOL_OPTIONS
-        value: -XX:MaxRAMPercentage=75.0
+        value: -XX:MaxRAMPercentage=75.0 -Djava.net.preferIPv4Stack=true
+      - key: SESSION_COOKIE_SECURE
+        value: "true"

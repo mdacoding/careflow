@@ -284,6 +284,17 @@ class CareflowApiTest {
     }
 
     @Test
+    void productionBindAndRenderSecureCookieAreDocumented() throws Exception {
+        String app = Files.readString(Path.of("src/main/resources/application.yml"));
+        assertThat(app).contains("address: 0.0.0.0");
+        assertThat(app).contains("forward-headers-strategy: native");
+        assertThat(app).contains("${SESSION_COOKIE_SECURE:false}");
+        String docker = Files.readString(Path.of("Dockerfile"));
+        assertThat(docker).contains("preferIPv4Stack");
+        assertThat(docker).contains("server.servlet.session.cookie.secure=true");
+    }
+
+    @Test
     void patientChartExposesCreatinineAndEgfrWhenKreaResulted() throws Exception {
         mvc.perform(get("/api/patients/" + DemoDataSeeder.MIRA_ID).session(physician))
                 .andExpect(status().isOk())

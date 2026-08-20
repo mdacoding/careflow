@@ -1,11 +1,13 @@
 server:
   port: ${PORT:8080}
+  address: 0.0.0.0
+  forward-headers-strategy: native
   servlet:
     session:
       timeout: 8h
       cookie:
         http-only: true
-        secure: false
+        secure: ${SESSION_COOKIE_SECURE:false}
         same-site: lax
 
 spring:

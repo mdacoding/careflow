@@ -19,4 +19,4 @@ USER spring
 COPY --from=build /app/target/careflow-*.jar app.jar
 EXPOSE 8080
 ENV PORT=8080
-ENTRYPOINT ["sh", "-c", "java -XX:MaxRAMPercentage=75.0 -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java -XX:MaxRAMPercentage=75.0 -Djava.net.preferIPv4Stack=true -Dserver.servlet.session.cookie.secure=true -jar app.jar"]
