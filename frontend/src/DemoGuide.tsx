@@ -73,6 +73,9 @@ export function DemoGuide({
         Synthetische Demodaten, fiktives Musterklinikum Nord. Fall: Elena Krüger, Allergie Penicillin, Verdacht
         Pneumonie.
       </p>
+      <p className="muted">
+        Optionaler zweiter Fall: Karl-Heinz Vogt (NSAR / CKD-EPI) — nicht der 5-Minuten-Pfad.
+      </p>
     </aside>
   );
 }

@@ -77,10 +77,13 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 
 **Qualität / Betrieb**
 - Bean Validation: ungültiger Request → HTTP 400 `VALIDATION`
+- CSRF absichtlich aus (Cookie-SPA + Vite-Proxy); Session HttpOnly + SameSite=Lax
+- WebSocket-Origins: localhost und `https://*.onrender.com` (kein `*`)
 - Demo-Session: 8 Stunden
 - JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, Override `BLOCKED`/`overridden`, VALIDATION 400, RBAC, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR Search/Read ohne Create, CapabilityStatement)
 - GitHub Actions (CI grün): Temurin 21, Node 22, Free Runner
 - Docker Multi-Stage; Render Free, ein Dienst, H2 im Speicher
+- Live-URL `careflow.onrender.com` bleibt 404, bis das Render-Blueprint verbunden ist
 
 Kein Kafka, kein STOMP, kein Keycloak, keine bezahlte Arzneimittel-DB.
 
