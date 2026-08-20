@@ -84,7 +84,8 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 
 **Frontend**
 - React 19, TypeScript, Vite 6
-- Produktionsbuild im selben JAR
+- Views: Login, Stationsboard, Akte, Labor-Worklist, Interop
+- Produktionsbuild im selben JAR (`npm run build:spring`)
 - WebSocket-Ereignisse in der UI nur mit Session; HL7-Storno als ORM CA
 
 **Qualität / Betrieb**
@@ -125,7 +126,7 @@ UI: http://localhost:5173 — API: http://localhost:8080/swagger-ui.html
 UI im JAR:
 
 ```bash
-cd frontend && npm run build
+cd frontend && npm run build:spring
 ./mvnw spring-boot:run
 ```
 

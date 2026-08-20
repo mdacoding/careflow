@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "build:spring": "vite build --outDir ../src/main/resources/static --emptyOutDir",
+    "build:spring": "vite build --outDir ../src/main/resources/static --emptyOutDir && node -e \"require('fs').writeFileSync('../src/main/resources/static/.gitkeep','')\"",
     "preview": "vite preview"
   },
   "dependencies": {
