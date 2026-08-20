@@ -2,14 +2,11 @@ package de.careflow.api;
 
 import de.careflow.catalog.Catalog;
 import de.careflow.demo.DemoDataSeeder;
-import de.careflow.domain.AllergyEntity;
 import de.careflow.domain.AuditEventEntity;
-import de.careflow.domain.CdsAlertEntity;
 import de.careflow.domain.ClinicalOrderEntity;
 import de.careflow.domain.EncounterEntity;
 import de.careflow.domain.Hl7MessageEntity;
 import de.careflow.domain.ObservationEntity;
-import de.careflow.domain.OrderKind;
 import de.careflow.domain.PatientEntity;
 import de.careflow.fhir.FhirMapper;
 import de.careflow.security.StaffDirectory;
@@ -57,12 +54,12 @@ public class CareflowController {
                 "blockMed", "AMOX",
                 "safeMed", "CEFU",
                 "steps", List.of(
-                        "Als Ärztin anmelden und Stationsboard öffnen",
-                        "Elena Krüger (Demo-Fall, Penicillin-Allergie) öffnen",
-                        "Laborauftrag Blutbild + CRP auslösen",
-                        "Ins Labor wechseln und Befund freigeben",
-                        "CRP-Anstieg sehen, Amoxicillin versuchen (AMTS-Sperre)",
-                        "HL7 ORM/ORU und FHIR-Bundle in der Interop-Ansicht zeigen"));
+                        "Als Ärztin anmelden, Stationsboard Innere 3",
+                        "Elena Krüger öffnen (Demo-Fall, Allergie Penicillin)",
+                        "Laborauftrag Blutbild + CRP → HL7 ORM^O01",
+                        "Labor: Auftrag annehmen, Befund freigeben → ORU^R01",
+                        "CRP pathologisch; Amoxicillin — AMTS sperrt (ATC J01C)",
+                        "Cefuroxim mit Kreuzallergie-Hinweis; Interop: HL7 und FHIR-Bundle"));
     }
 
     @GetMapping("/catalog")
@@ -72,15 +69,8 @@ public class CareflowController {
 
     @GetMapping("/ward")
     public List<WardCard> ward() {
-        return careflow.ward().stream().map(patient -> {
-            List<ClinicalOrderEntity> orders = careflow.ordersOf(patient.getId());
-            long openLabs = orders.stream()
-                    .filter(order -> order.getKind() == OrderKind.LAB && order.getStatus().name().matches("PLACED|IN_LAB"))
-                    .count();
-            boolean criticalResult = orders.stream()
-                    .filter(order -> order.getKind() == OrderKind.LAB)
-                    .flatMap(order -> careflow.observationsOf(order.getId()).stream())
-                    .anyMatch(ObservationEntity::abnormal);
+        return careflow.wardBoard().stream().map(overview -> {
+            PatientEntity patient = overview.patient();
             return new WardCard(
                     patient.getId(),
                     patient.getMrn(),
@@ -92,9 +82,9 @@ public class CareflowController {
                     patient.getWorkingDiagnosis(),
                     patient.getAcuity(),
                     patient.isDemoStar(),
-                    openLabs,
-                    criticalResult,
-                    careflow.allergiesOf(patient.getId()).stream().map(AllergyEntity::getSubstance).toList());
+                    overview.openLabs(),
+                    overview.criticalResult(),
+                    overview.allergies());
         }).toList();
     }
 

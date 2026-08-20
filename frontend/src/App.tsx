@@ -22,11 +22,11 @@ const ROLES: { username: string; label: string }[] = [
 function statusLabel(status: string) {
   return (
     {
-      PLACED: "im Labor eingegangen",
-      IN_LAB: "in Bearbeitung",
+      PLACED: "übermittelt",
+      IN_LAB: "in Analytik",
       RESULTED: "befundet",
       ACTIVE: "aktiv",
-      BLOCKED: "gesperrt",
+      BLOCKED: "AMTS-Sperre",
       CANCELLED: "storniert",
     }[status] ?? status
   );
@@ -121,7 +121,7 @@ export default function App() {
     setBusy(true);
     try {
       await api.placeLab(patient.id, demo.labPreset);
-      setFlash("Laborauftrag gesendet — HL7 ORM^O01 liegt im Interop-Log.");
+      setFlash("Laborauftrag übermittelt — HL7 ORM^O01 und ACK liegen im Interop-Log.");
       setStep(3);
       await refreshContext();
     } finally {
@@ -140,7 +140,7 @@ export default function App() {
         await api.acceptLab(item.orderId);
       }
       await api.releaseLab(item.orderId);
-      setFlash("Befund freigegeben — ORU^R01 erzeugt.");
+      setFlash("Befund freigegeben — ORU^R01 erzeugt, LOINC-Werte in der Akte.");
       setStep(4);
       await openPatient(item.patientId);
     } finally {
@@ -160,7 +160,7 @@ export default function App() {
       const payload = (error as { payload?: CdsError }).payload;
       if (payload?.error === "CDS_BLOCK") {
         setCds(payload);
-        setFlash("AMTS hat Amoxicillin gesperrt.");
+        setFlash("AMTS sperrt Amoxicillin (Allergie Penicillin, ATC J01C).");
         setStep(5);
       } else {
         setFlash((error as Error).message);
@@ -178,7 +178,7 @@ export default function App() {
     setBusy(true);
     try {
       await api.placeMed(patient.id, "CEFU");
-      setFlash("Cefuroxim verordnet — Kreuzallergie nur als Hinweis.");
+      setFlash("Cefuroxim verordnet — AMTS: Kreuzallergie β-Laktam als Hinweis.");
       setStep(6);
       await refreshContext();
     } finally {
@@ -193,24 +193,24 @@ export default function App() {
           <div className="kicker">Musterklinikum Nord · Innere 3</div>
           <h1>Careflow</h1>
           <p className="muted">
-            Klinischer Stationsarbeitsplatz mit Auftragswesen, Laborbefund, AMTS und Interop (HL7 v2 / FHIR R4).
-            Nur synthetische Demodaten, Passwort überall <code>demo</code>.
+            Klinischer Stationsarbeitsplatz: CPOE, Laborbefund, AMTS, HL7 v2 ORM/ORU, FHIR R4.
+            Synthetische Demodaten. Passwort überall <code>demo</code>.
           </p>
           <div className="login-grid">
             <button className="staff" onClick={() => void enter("weber", true)}>
               <span className="kicker">5-Minuten-Demo</span>
               <b>Dr. med. Lena Weber</b>
-              <span className="muted">Oberärztin — startet den geführten Fall Elena Krüger</span>
+              <span className="muted">Oberärztin — führt den Demo-Fall Elena Krüger</span>
             </button>
             <button className="staff" onClick={() => void enter("hoffmann")}>
               <span className="kicker">Labor</span>
               <b>Tim Hoffmann</b>
-              <span className="muted">MTA — Worklist und Befundfreigabe</span>
+              <span className="muted">MTA — Worklist, Annahme, Befundfreigabe</span>
             </button>
             <button className="staff" onClick={() => void enter("schmidt")}>
               <span className="kicker">Pflege</span>
               <b>Paula Schmidt</b>
-              <span className="muted">Lesen, keine Verordnung</span>
+              <span className="muted">Station — lesend, ohne CPOE</span>
             </button>
           </div>
         </div>
@@ -236,7 +236,7 @@ export default function App() {
             Labor
           </button>
           <button className={view === "interop" ? "active" : ""} onClick={() => { setView("interop"); setStep(6); }}>
-            Interop
+            HL7 / FHIR
           </button>
         </nav>
         <div className="who">
@@ -260,9 +260,9 @@ export default function App() {
           {view === "ward" && (
             <>
               <section className="stats">
-                <article className="stat"><strong>{ward.length}</strong><span>Fälle auf Station</span></article>
+                <article className="stat"><strong>{ward.length}</strong><span>Fälle Station Innere 3</span></article>
                 <article className="stat"><strong>{ward.reduce((sum, card) => sum + card.openLabs, 0)}</strong><span>offene Laboraufträge</span></article>
-                <article className="stat"><strong>{ward.filter((card) => card.allergies.length).length}</strong><span>mit Allergie</span></article>
+                <article className="stat"><strong>{ward.filter((card) => card.allergies.length).length}</strong><span>mit dokumentierter Allergie</span></article>
                 <article className="stat"><strong>{ward.filter((card) => card.criticalResult).length}</strong><span>pathologische Befunde</span></article>
               </section>
               <section className="beds">
@@ -279,7 +279,7 @@ export default function App() {
                       </div>
                       <div className="chips">
                         {card.demoStar && <span className="chip star">Demo-Fall</span>}
-                        <span className={`chip ${card.acuity === "hoch" ? "high" : ""}`}>{card.acuity}</span>
+                        <span className={`chip ${card.acuity === "hoch" ? "high" : ""}`}>Akuität {card.acuity}</span>
                       </div>
                     </header>
                     <div>{card.workingDiagnosis}</div>
@@ -289,7 +289,7 @@ export default function App() {
                         <span key={allergy} className="chip high">{allergy}</span>
                       ))}
                       {card.openLabs > 0 && <span className="chip warn">{card.openLabs} Labor offen</span>}
-                      {card.criticalResult && <span className="chip high">pathol. Befund</span>}
+                      {card.criticalResult && <span className="chip high">Befund pathologisch</span>}
                     </div>
                   </article>
                 ))}
@@ -308,7 +308,7 @@ export default function App() {
                 <p><strong>{patient.workingDiagnosis}</strong> — {patient.chiefComplaint}</p>
                 <div className="chips">
                   {patient.allergies.map((allergy) => (
-                    <span key={allergy.substance} className="chip high">Allergie {allergy.substance} ({allergy.atcPrefix})</span>
+                    <span key={allergy.substance} className="chip high">Allergie {allergy.substance} · ATC {allergy.atcPrefix}</span>
                   ))}
                 </div>
               </section>
@@ -318,15 +318,15 @@ export default function App() {
                   <p>{cds.alerts[0]?.message}</p>
                   <div className="row">
                     <button className="primary" onClick={() => void orderCefu()} disabled={busy || staff.role !== "PHYSICIAN"}>
-                      Stattdessen Cefuroxim
+                      Stattdessen Cefuroxim (J01D)
                     </button>
                   </div>
                 </section>
               )}
               <section className="split">
                 <article className="card">
-                  <h3>Labor anordnen</h3>
-                  <p className="muted">Rolle Arzt erzeugt ORM^O01, das Labor antwortet mit ACK und später ORU^R01.</p>
+                  <h3>Laborauftrag (CPOE)</h3>
+                  <p className="muted">Arzt löst ORM^O01 aus; das Labor antwortet mit ACK und später ORU^R01.</p>
                   <div className="row">
                     {catalog?.labs.map((item) => (
                       <button
@@ -339,10 +339,10 @@ export default function App() {
                       </button>
                     ))}
                   </div>
-                  <h3>Medikation</h3>
+                  <h3>Verordnung (AMTS)</h3>
                   <div className="row">
                     <button className="danger" disabled={busy || staff.role !== "PHYSICIAN"} onClick={() => void tryAmox()}>
-                      Amoxicillin (Allergie-Demo)
+                      Amoxicillin — Allergie-Check
                     </button>
                     {catalog?.meds.filter((item) => item.code !== "AMOX").map((item) => (
                       <button
@@ -357,7 +357,7 @@ export default function App() {
                   </div>
                 </article>
                 <article className="card">
-                  <h3>Aufträge & Befunde</h3>
+                  <h3>Aufträge und Befunde</h3>
                   <table>
                     <thead>
                       <tr><th>Auftrag</th><th>Status</th><th>Werte</th></tr>
@@ -389,7 +389,7 @@ export default function App() {
           {view === "lab" && (
             <section className="card">
               <h2>Labor-Worklist</h2>
-              <p className="muted">Annahme setzt den Status auf in Bearbeitung, Freigabe erzeugt Messwerte und ORU^R01.</p>
+              <p className="muted">Annahme: Status IN_LAB. Freigabe schreibt Messwerte (LOINC) und ORU^R01.</p>
               <table>
                 <thead>
                   <tr><th>Patient</th><th>Auftrag</th><th>Status</th><th></th></tr>
@@ -423,7 +423,7 @@ export default function App() {
           {view === "interop" && (
             <section className="split">
               <article className="card">
-                <h2>HL7 v2 Nachrichten</h2>
+                <h2>HL7 v2 (ORM / ORU / ACK)</h2>
                 <table>
                   <thead>
                     <tr><th>Zeit</th><th>Richtung</th><th>Typ</th></tr>
@@ -432,30 +432,30 @@ export default function App() {
                     {messages.map((message) => (
                       <tr key={message.id} onClick={() => setSelectedHl7(message.id)} style={{ cursor: "pointer" }}>
                         <td>{new Date(message.createdAt).toLocaleTimeString("de-DE")}</td>
-                        <td>{message.direction}</td>
+                        <td>{message.direction === "OUTBOUND" ? "Ausgang" : "Eingang"}</td>
                         <td>{message.messageType} {message.ackCode ?? ""}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <pre>{liveHl7?.raw ?? "Noch keine Nachrichten."}</pre>
+                <pre>{liveHl7?.raw ?? "Noch keine HL7-Nachricht."}</pre>
               </article>
               <article className="card">
-                <h2>FHIR R4 Bundle</h2>
+                <h2>FHIR R4 Collection-Bundle</h2>
                 <p className="muted">
-                  Projektion der Akte als Collection-Bundle. Zusätzlich HAPI-Endpunkt <code>/fhir/Patient</code>.
+                  Dieselbe Akte als Bundle. Zusätzlich HAPI RestfulServer unter <code>/fhir/Patient</code>.
                 </p>
                 <div className="row">
                   {patient && (
                     <button className="primary" onClick={() => void api.fhir(patient.id).then(setFhir)}>
-                      Bundle dieser Akte
+                      FHIR-Bundle laden
                     </button>
                   )}
                   <a className="ghost" href="/fhir/Patient" target="_blank" rel="noreferrer" style={{ padding: "8px 12px", textDecoration: "none", color: "inherit", border: "1px solid var(--line)", borderRadius: 8 }}>
                     /fhir/Patient
                   </a>
                 </div>
-                <pre>{fhir || "Akte öffnen, dann Bundle laden."}</pre>
+                <pre>{fhir || "Akte öffnen, dann FHIR-Bundle laden."}</pre>
               </article>
             </section>
           )}
@@ -471,7 +471,7 @@ export default function App() {
             ))}
           </ol>
           <p className="muted" style={{ marginTop: 16 }}>
-            Keine echten Patientendaten, kein Klinikname eines Arbeitgebers. Fallakte: Elena Krüger, Penicillin-Allergie, Pneumonie-Verdacht.
+            Synthetische Demodaten, fiktives Musterklinikum Nord. Fall: Elena Krüger, Allergie Penicillin, Verdacht Pneumonie.
           </p>
         </aside>
       </div>

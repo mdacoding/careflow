@@ -20,7 +20,7 @@ public class StaffDirectory {
     public static final List<Staff> STAFF = List.of(
             new Staff("weber", "Dr. med. Lena Weber", "PHYSICIAN", "Oberärztin Innere Medizin"),
             new Staff("hoffmann", "Tim Hoffmann", "LAB", "MTA Klinische Chemie"),
-            new Staff("schmidt", "Paula Schmidt", "NURSE", "Gesundheits- und Krankenpflegerin Innere 3"));
+            new Staff("schmidt", "Paula Schmidt", "NURSE", "Pflegefachperson Innere 3"));
 
     private final Map<String, Staff> byUsername = STAFF.stream()
             .collect(Collectors.toMap(Staff::username, Function.identity()));

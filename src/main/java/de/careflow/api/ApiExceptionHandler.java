@@ -3,12 +3,12 @@ package de.careflow.api;
 import de.careflow.cds.CdsBlockException;
 import de.careflow.cds.CdsEngine;
 import de.careflow.domain.IllegalOrderStateException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.List;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -26,6 +26,12 @@ public class ApiExceptionHandler {
     public ResponseEntity<Map<String, String>> illegal(IllegalOrderStateException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", "ILLEGAL_STATE", "message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, String>> concurrent(OptimisticLockingFailureException ignored) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "OPTIMISTIC_LOCK", "message", "Auftrag wurde parallel geändert, bitte neu laden"));
     }
 
     private static Map<String, String> alert(CdsEngine.Finding finding) {

@@ -1,7 +1,9 @@
 package de.careflow.catalog;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public final class Catalog {
 
@@ -36,5 +38,23 @@ public final class Catalog {
 
     public static Optional<MedItem> med(String code) {
         return MEDS.stream().filter(item -> item.code().equals(code)).findFirst();
+    }
+
+    /**
+     * Offene Aufträge derselben Messung oder eines überlappenden Panels (BBCRP ⊃ BB, CRP) gelten als Duplikat.
+     */
+    public static boolean labConflicts(String requested, String existing) {
+        Set<String> requestedParts = new HashSet<>(labParts(requested));
+        requestedParts.retainAll(labParts(existing));
+        return !requestedParts.isEmpty();
+    }
+
+    private static Set<String> labParts(String code) {
+        return switch (code) {
+            case "BBCRP" -> Set.of("BB", "CRP");
+            case "BB" -> Set.of("BB");
+            case "CRP" -> Set.of("CRP");
+            default -> Set.of(code);
+        };
     }
 }

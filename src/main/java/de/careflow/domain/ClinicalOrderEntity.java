@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -65,6 +66,10 @@ public class ClinicalOrderEntity {
     private boolean blocked;
 
     private String notes;
+
+    @Version
+    @Column(nullable = false)
+    private long version;
 
     @PrePersist
     void ensureId() {

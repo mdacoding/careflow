@@ -7,7 +7,7 @@ public class CdsBlockException extends RuntimeException {
     private final List<CdsEngine.Finding> findings;
 
     public CdsBlockException(List<CdsEngine.Finding> findings) {
-        super("Verordnung durch AMTS-Regelwerk gesperrt");
+        super("AMTS: Verordnung gesperrt");
         this.findings = findings;
     }
 

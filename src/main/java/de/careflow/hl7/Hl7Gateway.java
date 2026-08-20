@@ -8,6 +8,7 @@ import ca.uhn.hl7v2.parser.PipeParser;
 import de.careflow.domain.ClinicalOrderEntity;
 import de.careflow.domain.ObservationEntity;
 import de.careflow.domain.PatientEntity;
+import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +36,15 @@ public class Hl7Gateway {
         this.receivingApp = receivingApp;
         this.clinic = clinic.replace(' ', '_').toUpperCase();
         context.getParserConfiguration().setValidating(false);
+    }
+
+    @PreDestroy
+    public void close() {
+        try {
+            context.close();
+        } catch (Exception ignored) {
+            // Parser-Kontext nur für den Prozesslebenszyklus
+        }
     }
 
     public ParsedMessage orm(PatientEntity patient, ClinicalOrderEntity order) {

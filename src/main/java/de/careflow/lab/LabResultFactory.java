@@ -67,17 +67,8 @@ public class LabResultFactory {
         entity.setUnit(unit.isBlank() ? null : unit);
         entity.setRefLow(low.isBlank() ? null : new BigDecimal(low));
         entity.setRefHigh(high.isBlank() ? null : new BigDecimal(high));
-        entity.setInterpretation(flag(new BigDecimal(value), entity.getRefLow(), entity.getRefHigh()));
+        entity.setInterpretation(ReferenceRangeInterpreter.interpret(
+                loinc, entity.getValueNum(), entity.getRefLow(), entity.getRefHigh()));
         return entity;
-    }
-
-    static String flag(BigDecimal value, BigDecimal low, BigDecimal high) {
-        if (low != null && value.compareTo(low) < 0) {
-            return "L";
-        }
-        if (high != null && value.compareTo(high) > 0) {
-            return value.compareTo(high.multiply(BigDecimal.TEN)) > 0 ? "HH" : "H";
-        }
-        return "N";
     }
 }

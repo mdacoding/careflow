@@ -3,8 +3,11 @@ package de.careflow.cds;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Component
 public class CdsEngine {
@@ -22,68 +25,114 @@ public class CdsEngine {
             List<Allergy> allergies,
             List<ActiveMed> activeMeds,
             String diagnosis,
-            Double latestCreatinine) {
+            Double latestCreatinine,
+            Integer ageYears,
+            String sex) {
     }
 
     public record Finding(String ruleId, String severity, String title, String message) {
         public boolean blocking() {
             return "BLOCK".equals(severity);
         }
+
+        int rank() {
+            return blocking() ? 0 : "WARNING".equals(severity) ? 1 : 2;
+        }
     }
 
     public List<Finding> evaluate(Request request) {
-        List<Finding> findings = new ArrayList<>();
-        String atc = safe(request.atc());
-        String display = safe(request.display());
-        String diagnosis = safe(request.diagnosis());
+        AtcCode atc = AtcCode.parse(request.atc());
+        Double egfr = EgfrCalculator.ckdEpi2021(request.latestCreatinine(), request.ageYears(), request.sex());
+        List<Finding> raw = new ArrayList<>();
+        raw.addAll(allergyAndCross(request, atc));
+        raw.addAll(duplicateAtc(request, atc));
+        raw.addAll(nsaidHeartFailure(request, atc));
+        raw.addAll(renal(request, atc, egfr));
+        Map<String, Finding> unique = new LinkedHashMap<>();
+        for (Finding finding : raw) {
+            unique.putIfAbsent(finding.ruleId(), finding);
+        }
+        return unique.values().stream().sorted(Comparator.comparingInt(Finding::rank)).toList();
+    }
 
+    private List<Finding> allergyAndCross(Request request, AtcCode atc) {
+        List<Finding> findings = new ArrayList<>();
+        String display = safe(request.display());
         for (Allergy allergy : request.allergies()) {
-            boolean prefixHit = allergy.atcPrefix() != null
-                    && !allergy.atcPrefix().isBlank()
-                    && atc.startsWith(allergy.atcPrefix());
-            boolean nameHit = contains(display, allergy.substance()) || contains(allergy.substance(), display);
-            if (prefixHit || nameHit) {
+            AtcCode prefix = AtcCode.parse(allergy.atcPrefix());
+            boolean atcHit = atc.coveredBy(prefix);
+            boolean nameHit = prefix.isBlank() && (contains(display, allergy.substance())
+                    || contains(allergy.substance(), display));
+            if (atcHit || nameHit) {
                 findings.add(new Finding(
                         "ALLERGY_MATCH",
                         "BLOCK",
-                        "Allergie: " + allergy.substance(),
-                        "Verordnung von %s ist bei dokumentierter Allergie gegen %s gesperrt.".formatted(
-                                request.display(), allergy.substance())));
-            } else if (atc.startsWith("J01D") && "J01C".equals(allergy.atcPrefix())) {
+                        "AMTS: Allergie " + allergy.substance(),
+                        "Verordnung %s (ATC %s) ist bei dokumentierter Allergie gegen %s gesperrt.".formatted(
+                                request.display(), atc.value(), allergy.substance())));
+            } else if (atc.cephalosporin() && prefix.penicillinClass()) {
                 findings.add(new Finding(
                         "CEPHALOSPORIN_CROSS",
                         "WARNING",
-                        "Mögliche Kreuzallergie",
-                        "Cephalosporin nach Penicillin-Allergie: Kreuzreaktion selten, klinisch abwägen."));
+                        "AMTS: Kreuzallergie β-Laktam",
+                        "Cephalosporin (ATC J01D) nach Penicillin-Allergie (J01C): Kreuzreaktion selten, klinisch abwägen."));
             }
         }
+        return findings;
+    }
 
+    private List<Finding> duplicateAtc(Request request, AtcCode atc) {
+        List<Finding> findings = new ArrayList<>();
         for (ActiveMed active : request.activeMeds()) {
-            if (active.atc() != null && !active.atc().isBlank() && active.atc().equals(atc)) {
+            AtcCode existing = AtcCode.parse(active.atc());
+            if (atc.sameChemicalGroup(existing)) {
                 findings.add(new Finding(
                         "DUPLICATE_ATC",
                         "WARNING",
-                        "Doppelverordnung",
-                        "%s ist bereits aktiv (ATC %s).".formatted(active.display(), active.atc())));
+                        "AMTS: Doppelverordnung",
+                        "%s ist bereits aktiv (chemische ATC-Gruppe %s).".formatted(
+                                active.display(), existing.chemicalGroup())));
             }
         }
+        return findings;
+    }
 
-        if (atc.startsWith("M01A") && contains(diagnosis, "Herzinsuffizienz")) {
-            findings.add(new Finding(
+    private List<Finding> nsaidHeartFailure(Request request, AtcCode atc) {
+        if (atc.nsaid() && contains(request.diagnosis(), "Herzinsuffizienz")) {
+            return List.of(new Finding(
                     "NSAID_HEART_FAILURE",
                     "WARNING",
-                    "NSAR bei Herzinsuffizienz",
-                    "Ibuprofen/NSAR können die Herzinsuffizienz verschlechtern und die Nierenfunktion belasten."));
+                    "AMTS: NSAR bei Herzinsuffizienz",
+                    "NSAR (ATC M01A) können die Herzinsuffizienz verschlechtern und die Nierenfunktion belasten."));
         }
+        return List.of();
+    }
 
-        if (request.latestCreatinine() != null && request.latestCreatinine() >= 1.5 && atc.startsWith("M01A")) {
+    private List<Finding> renal(Request request, AtcCode atc, Double egfr) {
+        List<Finding> findings = new ArrayList<>();
+        if (egfr == null) {
+            return findings;
+        }
+        if (atc.nsaid() && egfr < 30) {
+            findings.add(new Finding(
+                    "RENAL_NSAID",
+                    "BLOCK",
+                    "AMTS: NSAR bei eGFR < 30",
+                    "CKD-EPI eGFR %.0f ml/min/1,73 m²: NSAR ist kontraindiziert.".formatted(egfr)));
+        } else if (atc.nsaid() && egfr < 60) {
             findings.add(new Finding(
                     "RENAL_NSAID",
                     "WARNING",
-                    "NSAR bei eingeschränkter Niere",
-                    "Kreatinin %.1f mg/dl: NSAR nur mit strenger Indikation.".formatted(request.latestCreatinine())));
+                    "AMTS: NSAR bei eingeschränkter Niere",
+                    "CKD-EPI eGFR %.0f ml/min/1,73 m²: NSAR nur mit strenger Indikation.".formatted(egfr)));
         }
-
+        if (atc.aceInhibitor() && egfr < 30) {
+            findings.add(new Finding(
+                    "RENAL_ACEI",
+                    "WARNING",
+                    "AMTS: ACE-Hemmer bei eGFR < 30",
+                    "CKD-EPI eGFR %.0f ml/min/1,73 m²: ACE-Hemmer (C09A) nur unter Kontrolle von Krea/K+.".formatted(egfr)));
+        }
         return findings;
     }
 

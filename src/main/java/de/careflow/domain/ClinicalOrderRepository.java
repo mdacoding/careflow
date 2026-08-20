@@ -11,4 +11,6 @@ public interface ClinicalOrderRepository extends JpaRepository<ClinicalOrderEnti
     List<ClinicalOrderEntity> findByKindAndStatusInOrderByOrderedAtAsc(OrderKind kind, Collection<OrderStatus> statuses);
 
     List<ClinicalOrderEntity> findByPatientIdAndKindAndStatusIn(String patientId, OrderKind kind, Collection<OrderStatus> statuses);
+
+    List<ClinicalOrderEntity> findByPatientIdIn(Collection<String> patientIds);
 }

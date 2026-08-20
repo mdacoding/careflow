@@ -17,3 +17,7 @@ frontend/dist/
 src/main/resources/static/**
 !src/main/resources/static/.gitkeep
 lokal/
+docs/internal/
+**/*projekttexte*
+docs/internal/
+**/*projekttexte*

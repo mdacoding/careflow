@@ -13,6 +13,6 @@ public class OpenApiConfig {
         return new OpenAPI().info(new Info()
                 .title("Careflow API")
                 .version("1.0.0")
-                .description("Stationsarbeitsplatz: Aufträge, Labor, AMTS, HL7 v2, FHIR R4. Nur synthetische Demodaten."));
+                .description("Stationsarbeitsplatz: CPOE, Laborbefund, AMTS (ATC-Hierarchie, CKD-EPI), HL7 v2 ORM/ORU, FHIR R4. Synthetische Demodaten."));
     }
 }

@@ -13,7 +13,6 @@ import de.careflow.domain.EncounterEntity;
 import de.careflow.domain.EncounterRepository;
 import de.careflow.domain.Hl7MessageEntity;
 import de.careflow.domain.Hl7MessageRepository;
-import de.careflow.domain.IllegalOrderStateException;
 import de.careflow.domain.ObservationEntity;
 import de.careflow.domain.ObservationRepository;
 import de.careflow.domain.OrderKind;
@@ -30,11 +29,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.Period;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class CareflowService {
@@ -85,6 +88,43 @@ public class CareflowService {
         return patients.findAllByWardOrderByBedAsc(WARD);
     }
 
+    public List<WardOverview> wardBoard() {
+        List<PatientEntity> patients = ward();
+        List<String> ids = patients.stream().map(PatientEntity::getId).toList();
+        Map<String, List<ClinicalOrderEntity>> ordersByPatient = ids.isEmpty()
+                ? Map.of()
+                : orders.findByPatientIdIn(ids).stream().collect(Collectors.groupingBy(ClinicalOrderEntity::getPatientId));
+        Map<String, List<AllergyEntity>> allergiesByPatient = ids.isEmpty()
+                ? Map.of()
+                : allergies.findByPatientIdIn(ids).stream().collect(Collectors.groupingBy(AllergyEntity::getPatientId));
+        List<String> labOrderIds = ordersByPatient.values().stream()
+                .flatMap(List::stream)
+                .filter(order -> order.getKind() == OrderKind.LAB)
+                .map(ClinicalOrderEntity::getId)
+                .toList();
+        Map<String, List<ObservationEntity>> observationsByOrder = labOrderIds.isEmpty()
+                ? Map.of()
+                : observations.findByOrderIdIn(labOrderIds).stream().collect(Collectors.groupingBy(ObservationEntity::getOrderId));
+        return patients.stream().map(patient -> {
+            List<ClinicalOrderEntity> patientOrders = ordersByPatient.getOrDefault(patient.getId(), List.of());
+            long openLabs = patientOrders.stream()
+                    .filter(order -> order.getKind() == OrderKind.LAB
+                            && (order.getStatus() == OrderStatus.PLACED || order.getStatus() == OrderStatus.IN_LAB))
+                    .count();
+            boolean criticalResult = patientOrders.stream()
+                    .filter(order -> order.getKind() == OrderKind.LAB)
+                    .flatMap(order -> observationsByOrder.getOrDefault(order.getId(), List.of()).stream())
+                    .anyMatch(ObservationEntity::abnormal);
+            List<String> allergyNames = allergiesByPatient.getOrDefault(patient.getId(), List.of()).stream()
+                    .map(AllergyEntity::getSubstance)
+                    .toList();
+            return new WardOverview(patient, allergyNames, openLabs, criticalResult);
+        }).toList();
+    }
+
+    public record WardOverview(PatientEntity patient, List<String> allergies, long openLabs, boolean criticalResult) {
+    }
+
     public PatientEntity patient(String id) {
         return patients.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
@@ -127,7 +167,14 @@ public class CareflowService {
     public ClinicalOrderEntity placeLab(Staff staff, String patientId, String catalogCode) {
         requireRole(staff, "PHYSICIAN");
         Catalog.LabItem item = Catalog.lab(catalogCode)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unbekannter Laborauftrag"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unbekannter Laborkatalog"));
+        boolean openDuplicate = orders.findByPatientIdAndKindAndStatusIn(
+                        patientId, OrderKind.LAB, EnumSet.of(OrderStatus.PLACED, OrderStatus.IN_LAB))
+                .stream()
+                .anyMatch(existing -> Catalog.labConflicts(catalogCode, existing.getCatalogCode()));
+        if (openDuplicate) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Offener Laborauftrag überlappt mit diesem Panel");
+        }
         PatientEntity patient = patient(patientId);
         EncounterEntity encounter = encounter(patientId);
         ClinicalOrderEntity order = new ClinicalOrderEntity();
@@ -148,7 +195,7 @@ public class CareflowService {
         Hl7Gateway.ParsedMessage ack = hl7Gateway.ack(orm.controlId(), "O01");
         persistHl7(order.getId(), "INBOUND", ack);
 
-        auditService.record(staff, "LAB_ORDER_PLACED", "ClinicalOrder", order.getId(), item.display());
+        auditService.record(staff, "Laborauftrag übermittelt", "ClinicalOrder", order.getId(), item.display());
         socketHandler.publish("ORDER_PLACED", patientId, order.getId(), "Laborauftrag " + item.display());
         return order;
     }
@@ -160,7 +207,7 @@ public class CareflowService {
         de.careflow.domain.OrderStateMachine.require(order.getKind(), order.getStatus(), OrderStatus.IN_LAB);
         order.setStatus(OrderStatus.IN_LAB);
         order.setAcceptedAt(Instant.now());
-        auditService.record(staff, "LAB_ACCEPTED", "ClinicalOrder", order.getId(), order.getDisplayName());
+        auditService.record(staff, "Laborauftrag angenommen", "ClinicalOrder", order.getId(), order.getDisplayName());
         socketHandler.publish("ORDER_ACCEPTED", order.getPatientId(), order.getId(), "Labor hat angenommen");
         return order;
     }
@@ -182,7 +229,7 @@ public class CareflowService {
         Hl7Gateway.ParsedMessage oru = hl7Gateway.oru(patient, order, results);
         persistHl7(order.getId(), "INBOUND", oru);
         persistHl7(order.getId(), "OUTBOUND", hl7Gateway.ack(oru.controlId(), "R01"));
-        auditService.record(staff, "LAB_RELEASED", "ClinicalOrder", order.getId(), order.getDisplayName());
+        auditService.record(staff, "Befund freigegeben", "ClinicalOrder", order.getId(), order.getDisplayName());
         socketHandler.publish("RESULT_READY", order.getPatientId(), order.getId(), "Befund " + order.getDisplayName());
         return order;
     }
@@ -207,7 +254,9 @@ public class CareflowService {
                         .map(active -> new CdsEngine.ActiveMed(active.getCatalogCode(), active.getAtc(), active.getDisplayName()))
                         .toList(),
                 patient.getWorkingDiagnosis(),
-                latestCreatinine(patientId)));
+                latestCreatinine(patientId),
+                Period.between(patient.getBirthDate(), LocalDate.now()).getYears(),
+                patient.getSex()));
 
         boolean blocking = findings.stream().anyMatch(CdsEngine.Finding::blocking);
         if (blocking && !override) {
@@ -229,13 +278,13 @@ public class CareflowService {
         if (blocking) {
             order.setStatus(OrderStatus.BLOCKED);
             order.setBlocked(true);
-            order.setNotes("Override durch " + staff.displayName());
+            order.setNotes("AMTS-Override durch " + staff.displayName());
         } else {
             order.setStatus(OrderStatus.ACTIVE);
         }
         orders.save(order);
         persistFindings(patientId, order.getId(), findings, override && blocking);
-        auditService.record(staff, blocking ? "MED_BLOCKED" : "MED_ORDERED", "ClinicalOrder", order.getId(), item.display());
+        auditService.record(staff, blocking ? "Verordnung durch AMTS gesperrt" : "Verordnung aktiv", "ClinicalOrder", order.getId(), item.display());
         socketHandler.publish(
                 blocking ? "MEDICATION_BLOCKED" : "MEDICATION_ORDERED",
                 patientId,
@@ -250,7 +299,7 @@ public class CareflowService {
         ClinicalOrderEntity order = order(orderId);
         de.careflow.domain.OrderStateMachine.require(order.getKind(), order.getStatus(), OrderStatus.CANCELLED);
         order.setStatus(OrderStatus.CANCELLED);
-        auditService.record(staff, "ORDER_CANCELLED", "ClinicalOrder", order.getId(), order.getDisplayName());
+        auditService.record(staff, "Auftrag storniert", "ClinicalOrder", order.getId(), order.getDisplayName());
         socketHandler.publish("ORDER_CANCELLED", order.getPatientId(), order.getId(), order.getDisplayName());
         return order;
     }
@@ -300,6 +349,6 @@ public class CareflowService {
                 return;
             }
         }
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Rolle " + staff.role() + " ist nicht berechtigt");
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Rolle " + staff.role() + " darf diese Aktion nicht ausführen");
     }
 }

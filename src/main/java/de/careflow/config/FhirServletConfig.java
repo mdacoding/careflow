@@ -30,7 +30,7 @@ public class FhirServletConfig {
         server.setServerName("Careflow FHIR");
         server.setServerVersion("1.0.0");
         server.setImplementationDescription(
-                "FHIR-R4-Projektion des Stationsarbeitsplatzes (Patient, Encounter, ServiceRequest, Observation, DiagnosticReport, MedicationRequest). Synthetische Demodaten, keine gematik-Bestätigung.");
+                "FHIR R4 RestfulServer: Projektion von Patient, Encounter, AllergyIntolerance, ServiceRequest, Observation, DiagnosticReport, MedicationRequest. Synthetische Demodaten, keine gematik-Bestätigung.");
         server.registerProviders(
                 patientProvider,
                 encounterProvider,

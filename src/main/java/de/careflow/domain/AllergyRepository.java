@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface AllergyRepository extends JpaRepository<AllergyEntity, String> {
     List<AllergyEntity> findByPatientId(String patientId);
+
+    List<AllergyEntity> findByPatientIdIn(java.util.Collection<String> patientIds);
 }

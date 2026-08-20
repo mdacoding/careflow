@@ -25,7 +25,7 @@ public final class OrderStateMachine {
     public static void require(OrderKind kind, OrderStatus from, OrderStatus to) {
         if (!allowed(kind, from).contains(to)) {
             throw new IllegalOrderStateException(
-                    "Übergang %s → %s ist für %s nicht erlaubt".formatted(from, to, kind));
+                    "Ungültiger Zustandsübergang %s → %s für Auftragstyp %s".formatted(from, to, kind));
         }
     }
 }
