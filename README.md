@@ -26,6 +26,18 @@ Optional zweiter Fall: **Karl-Heinz Vogt**, Herzinsuffizienz NYHA III. **Ibuprof
 
 Kennungen: `weber` Ärztin, `hoffmann` MTA, `schmidt` Pflege — Passwort `demo`. RBAC: Pflege ohne CPOE.
 
+## Screenshots
+
+Synthetische Demo, aufgenommen lokal.
+
+| Login | Station Innere 3 |
+|---|---|
+| ![Login](docs/screenshots/01-login.png) | ![Stationsboard](docs/screenshots/02-station.png) |
+| **AMTS-Sperre** Elena / Penicillin | **Interop** HL7 v2 + FHIR R4 |
+| ![AMTS](docs/screenshots/05-amts-sperre.png) | ![HL7 FHIR](docs/screenshots/06-interop.png) |
+
+Akte und Labor-Worklist: `docs/screenshots/03-akte-elena.png`, `docs/screenshots/04-labor.png`.
+
 ## Live-Demo
 
 Noch keine öffentliche Instanz: `careflow.onrender.com` antwortet mit 404, solange das Render-Blueprint nicht verbunden ist. Deploy auf Render Free:
@@ -125,3 +137,14 @@ http://localhost:8080
 ./mvnw -B test
 cd frontend && npm run build
 ```
+
+README-Screenshots (optional; Playwright nur lokal, keine Projekt-Dependency):
+
+```bash
+cd frontend && npm install --no-save playwright && npx playwright install chromium
+cd ..
+# UI im JAR, z. B. PORT=8090 ./mvnw spring-boot:run
+node scripts/capture-screenshots.mjs
+```
+
+`CAREFLOW_URL` default `http://127.0.0.1:8080`.
