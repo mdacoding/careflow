@@ -93,7 +93,7 @@ class CareflowApiTest {
     @Test
     void websocketIsNotAnonymous() throws Exception {
         mvc.perform(get("/api/ws"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
