@@ -429,7 +429,7 @@ class CareflowApiTest {
         assertThat(html).contains("og:title");
         assertThat(html).contains("Careflow");
         assertThat(html).contains("Musterklinikum Nord");
-        assertThat(html).contains("https://careflow.onrender.com");
+        assertThat(html).contains("https://github.com/mdacoding/careflow");
         assertThat(html).contains("index,follow");
     }
 
