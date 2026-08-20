@@ -9,6 +9,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpSession;
@@ -281,6 +283,65 @@ class CareflowApiTest {
             mvc.perform(post("/api/orders/" + orderId + "/cancel").session(physician))
                     .andExpect(status().isOk());
         }
+    }
+
+    @Test
+    void emptyLabCodeReturnsGermanValidationError() throws Exception {
+        mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                        .session(physician)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("code")))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("darf nicht")));
+    }
+
+    @Test
+    void fhirPatientPostDoesNotPersist() throws Exception {
+        ResponseEntity<String> before = rest.getForEntity("/fhir/Patient?_format=json", String.class);
+        assertThat(before.getStatusCode().is2xxSuccessful()).isTrue();
+        var mapper = JsonMapper.builder().build();
+        int countBefore = mapper.readTree(before.getBody()).path("entry").size();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> createRequest = new HttpEntity<>(
+                "{\"resourceType\":\"Patient\",\"name\":[{\"family\":\"NichtPersistieren\",\"given\":[\"Probe\"]}]}",
+                headers);
+        ResponseEntity<String> created = rest.postForEntity("/fhir/Patient?_format=json", createRequest, String.class);
+        boolean rejected = !created.getStatusCode().is2xxSuccessful()
+                || (created.getBody() != null && created.getBody().contains("OperationOutcome"));
+        assertThat(rejected)
+                .as("POST /fhir/Patient muss abgelehnt werden (kein 2xx, oder OperationOutcome)")
+                .isTrue();
+
+        ResponseEntity<String> after = rest.getForEntity("/fhir/Patient?_format=json", String.class);
+        assertThat(after.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(after.getBody()).doesNotContain("NichtPersistieren");
+        assertThat(mapper.readTree(after.getBody()).path("entry").size()).isEqualTo(countBefore);
+    }
+
+    @Test
+    void amtsOverridePlacesBlockedAmoxicillinWithOverriddenAlert() throws Exception {
+        mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/medication")
+                        .session(physician)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"AMOX\",\"override\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("BLOCKED"))
+                .andExpect(jsonPath("$.blocked").value(true));
+
+        mvc.perform(get("/api/patients/" + DemoDataSeeder.ELENA_ID).session(physician))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alerts[?(@.overridden==true)]").isNotEmpty());
+
+        mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/medication")
+                        .session(physician)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"AMOX\",\"override\":false}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("CDS_BLOCK"));
     }
 
     @Test

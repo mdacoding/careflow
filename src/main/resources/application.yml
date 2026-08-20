@@ -2,6 +2,7 @@ server:
   port: ${PORT:8080}
   servlet:
     session:
+      timeout: 8h
       cookie:
         http-only: true
         secure: false
