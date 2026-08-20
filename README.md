@@ -33,14 +33,16 @@ Synthetische Demo, aufgenommen lokal.
 | Login | Station Innere 3 |
 |---|---|
 | ![Login](docs/screenshots/01-login.png) | ![Stationsboard](docs/screenshots/02-station.png) |
-| **AMTS-Sperre** Elena / Penicillin | **Interop** HL7 v2 + FHIR R4 |
+| **AMTS-Sperre** Elena / Penicillin | **Interop** HL7 v2 + FHIR R4 (Spalte MSH) |
 | ![AMTS](docs/screenshots/05-amts-sperre.png) | ![HL7 FHIR](docs/screenshots/06-interop.png) |
 
-Akte und Labor-Worklist: `docs/screenshots/03-akte-elena.png`, `docs/screenshots/04-labor.png`.
+Akte, Labor-Worklist und Pflege-RBAC: `docs/screenshots/03-akte-elena.png`, `docs/screenshots/04-labor.png`, `docs/screenshots/07-pflege-rbac.png`.
 
 ## Live-Demo
 
 Öffentliche Demo auf Render Free: **https://careflow-1-s5lg.onrender.com**
+
+Nur diese Adresse (Render-Suffix `-s5lg`). `careflow.onrender.com` und `careflow-1.onrender.com` gehören **nicht** zu diesem Dienst.
 
 Render Free schläft nach Idle. Der **erste Request** danach kann **30–60 Sekunden** dauern (Cold Start) — das ist kein Fehler. Danach Login-Seite Musterklinikum Nord. H2 startet leer; der Seeder legt sechs Fälle an.
 

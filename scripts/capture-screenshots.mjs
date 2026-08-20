@@ -51,5 +51,11 @@ await page.getByRole("navigation").getByRole("button", { name: "HL7 / FHIR" }).c
 await page.waitForTimeout(600);
 await shot("06-interop.png");
 
+await page.getByRole("button", { name: "Pflege", exact: true }).click();
+await page.waitForTimeout(500);
+await page.getByRole("navigation").getByRole("button", { name: "Labor" }).click();
+await page.waitForSelector(".nurse-cpoe");
+await shot("07-pflege-rbac.png");
+
 await browser.close();
 console.log("Wrote screenshots to", outDir);
