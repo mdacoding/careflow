@@ -198,8 +198,18 @@ public class FhirMapper {
                 .toList();
     }
 
+    public List<Encounter> encountersForPatient(String patientId) {
+        return encounters.findByPatientId(patientId).stream()
+                .map(entity -> toEncounter(entity, patients.findById(entity.getPatientId()).orElseThrow()))
+                .toList();
+    }
+
     public List<AllergyIntolerance> allAllergies() {
         return allergies.findAll().stream().map(this::toAllergy).toList();
+    }
+
+    public List<AllergyIntolerance> allergiesForPatient(String patientId) {
+        return allergies.findByPatientId(patientId).stream().map(this::toAllergy).toList();
     }
 
     public List<ServiceRequest> allServiceRequests() {
@@ -209,8 +219,22 @@ public class FhirMapper {
                 .toList();
     }
 
+    public List<ServiceRequest> serviceRequestsForPatient(String patientId) {
+        return orders.findByPatientIdOrderByOrderedAtDesc(patientId).stream()
+                .filter(order -> order.getKind() == OrderKind.LAB)
+                .map(this::toServiceRequest)
+                .toList();
+    }
+
     public List<MedicationRequest> allMedicationRequests() {
         return orders.findAll().stream()
+                .filter(order -> order.getKind() == OrderKind.MEDICATION)
+                .map(this::toMedication)
+                .toList();
+    }
+
+    public List<MedicationRequest> medicationRequestsForPatient(String patientId) {
+        return orders.findByPatientIdOrderByOrderedAtDesc(patientId).stream()
                 .filter(order -> order.getKind() == OrderKind.MEDICATION)
                 .map(this::toMedication)
                 .toList();
@@ -227,9 +251,32 @@ public class FhirMapper {
         return list;
     }
 
+    public List<Observation> observationsForPatient(String patientId) {
+        List<Observation> list = new ArrayList<>();
+        for (ClinicalOrderEntity order : orders.findByPatientIdOrderByOrderedAtDesc(patientId)) {
+            if (order.getKind() != OrderKind.LAB) {
+                continue;
+            }
+            for (ObservationEntity entity : observations.findByOrderIdOrderBySortOrderAsc(order.getId())) {
+                list.add(toObservation(entity, order));
+            }
+        }
+        return list;
+    }
+
     public List<DiagnosticReport> allReports() {
         List<DiagnosticReport> list = new ArrayList<>();
         for (ClinicalOrderEntity order : orders.findAll()) {
+            if (order.getKind() == OrderKind.LAB && order.getStatus() == OrderStatus.RESULTED) {
+                list.add(toReport(order, observations.findByOrderIdOrderBySortOrderAsc(order.getId())));
+            }
+        }
+        return list;
+    }
+
+    public List<DiagnosticReport> reportsForPatient(String patientId) {
+        List<DiagnosticReport> list = new ArrayList<>();
+        for (ClinicalOrderEntity order : orders.findByPatientIdOrderByOrderedAtDesc(patientId)) {
             if (order.getKind() == OrderKind.LAB && order.getStatus() == OrderStatus.RESULTED) {
                 list.add(toReport(order, observations.findByOrderIdOrderBySortOrderAsc(order.getId())));
             }

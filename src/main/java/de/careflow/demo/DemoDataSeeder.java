@@ -25,6 +25,8 @@ import java.time.temporal.ChronoUnit;
 public class DemoDataSeeder implements ApplicationRunner {
 
     public static final String ELENA_ID = "11111111-1111-1111-1111-111111111111";
+    public static final String MIRA_ID = "33333333-3333-3333-3333-333333333333";
+    public static final String KARL_ID = "44444444-4444-4444-4444-444444444444";
 
     private final PatientRepository patients;
     private final AllergyRepository allergies;
@@ -61,10 +63,10 @@ public class DemoDataSeeder implements ApplicationRunner {
                 "22222222-2222-2222-2222-222222222222", "MKN-10022", "Jonas", "Berger", LocalDate.of(1981, 11, 2), "M",
                 "08", "Thoraxschmerz", "ACS nicht ausgeschlossen", false, "hoch");
         PatientEntity mira = patient(
-                "33333333-3333-3333-3333-333333333333", "MKN-10023", "Mira", "Al-Hassan", LocalDate.of(1996, 7, 19), "F",
+                MIRA_ID, "MKN-10023", "Mira", "Al-Hassan", LocalDate.of(1996, 7, 19), "F",
                 "15", "Flankenschmerz, Fieber", "Pyelonephritis", false, "mittel");
         PatientEntity karl = patient(
-                "44444444-4444-4444-4444-444444444444", "MKN-10024", "Karl-Heinz", "Vogt", LocalDate.of(1947, 1, 8), "M",
+                KARL_ID, "MKN-10024", "Karl-Heinz", "Vogt", LocalDate.of(1947, 1, 8), "M",
                 "03", "Belastungsdyspnoe, Ödeme", "Herzinsuffizienz NYHA III", false, "mittel");
         PatientEntity sophie = patient(
                 "55555555-5555-5555-5555-555555555555", "MKN-10025", "Sophie", "Lindner", LocalDate.of(1970, 9, 30), "F",
@@ -92,6 +94,14 @@ public class DemoDataSeeder implements ApplicationRunner {
         krea.setCompletedAt(Instant.now().minus(20, ChronoUnit.HOURS));
         orders.save(krea);
         for (ObservationEntity observation : labResultFactory.create(mira, "KREA", krea.getId())) {
+            observations.save(observation);
+        }
+
+        ClinicalOrderEntity kreaKarl = lab(karl, "KREA", "Kreatinin", OrderStatus.RESULTED, 24);
+        kreaKarl.setOrderedBy("Dr. med. Lena Weber");
+        kreaKarl.setCompletedAt(Instant.now().minus(18, ChronoUnit.HOURS));
+        orders.save(kreaKarl);
+        for (ObservationEntity observation : labResultFactory.create(karl, "KREA", kreaKarl.getId())) {
             observations.save(observation);
         }
 

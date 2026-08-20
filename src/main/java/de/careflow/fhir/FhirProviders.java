@@ -1,8 +1,10 @@
 package de.careflow.fhir;
 
 import ca.uhn.fhir.rest.annotation.IdParam;
+import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.Search;
+import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
@@ -20,6 +22,14 @@ import java.util.List;
 public final class FhirProviders {
 
     private FhirProviders() {
+    }
+
+    static String patientId(ReferenceParam patient) {
+        if (patient == null) {
+            return null;
+        }
+        String id = patient.getIdPart();
+        return (id == null || id.isBlank()) ? null : id;
     }
 
     @Component
@@ -60,8 +70,9 @@ public final class FhirProviders {
         }
 
         @Search
-        public List<Encounter> search() {
-            return mapper.allEncounters();
+        public List<Encounter> search(@OptionalParam(name = "patient") ReferenceParam patient) {
+            String patientId = FhirProviders.patientId(patient);
+            return patientId == null ? mapper.allEncounters() : mapper.encountersForPatient(patientId);
         }
     }
 
@@ -79,8 +90,9 @@ public final class FhirProviders {
         }
 
         @Search
-        public List<AllergyIntolerance> search() {
-            return mapper.allAllergies();
+        public List<AllergyIntolerance> search(@OptionalParam(name = "patient") ReferenceParam patient) {
+            String patientId = FhirProviders.patientId(patient);
+            return patientId == null ? mapper.allAllergies() : mapper.allergiesForPatient(patientId);
         }
     }
 
@@ -98,8 +110,9 @@ public final class FhirProviders {
         }
 
         @Search
-        public List<ServiceRequest> search() {
-            return mapper.allServiceRequests();
+        public List<ServiceRequest> search(@OptionalParam(name = "patient") ReferenceParam patient) {
+            String patientId = FhirProviders.patientId(patient);
+            return patientId == null ? mapper.allServiceRequests() : mapper.serviceRequestsForPatient(patientId);
         }
     }
 
@@ -117,8 +130,9 @@ public final class FhirProviders {
         }
 
         @Search
-        public List<Observation> search() {
-            return mapper.allObservations();
+        public List<Observation> search(@OptionalParam(name = "patient") ReferenceParam patient) {
+            String patientId = FhirProviders.patientId(patient);
+            return patientId == null ? mapper.allObservations() : mapper.observationsForPatient(patientId);
         }
     }
 
@@ -136,8 +150,9 @@ public final class FhirProviders {
         }
 
         @Search
-        public List<DiagnosticReport> search() {
-            return mapper.allReports();
+        public List<DiagnosticReport> search(@OptionalParam(name = "patient") ReferenceParam patient) {
+            String patientId = FhirProviders.patientId(patient);
+            return patientId == null ? mapper.allReports() : mapper.reportsForPatient(patientId);
         }
     }
 
@@ -155,8 +170,9 @@ public final class FhirProviders {
         }
 
         @Search
-        public List<MedicationRequest> search() {
-            return mapper.allMedicationRequests();
+        public List<MedicationRequest> search(@OptionalParam(name = "patient") ReferenceParam patient) {
+            String patientId = FhirProviders.patientId(patient);
+            return patientId == null ? mapper.allMedicationRequests() : mapper.medicationRequestsForPatient(patientId);
         }
     }
 }

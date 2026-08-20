@@ -3,6 +3,7 @@ package de.careflow.service;
 import de.careflow.catalog.Catalog;
 import de.careflow.cds.CdsBlockException;
 import de.careflow.cds.CdsEngine;
+import de.careflow.cds.EgfrCalculator;
 import de.careflow.domain.AllergyEntity;
 import de.careflow.domain.AllergyRepository;
 import de.careflow.domain.CdsAlertEntity;
@@ -308,7 +309,7 @@ public class CareflowService {
         return orders.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
-    private Double latestCreatinine(String patientId) {
+    public Double latestCreatinine(String patientId) {
         return ordersOf(patientId).stream()
                 .filter(order -> "KREA".equals(order.getCatalogCode()) && order.getStatus() == OrderStatus.RESULTED)
                 .findFirst()
@@ -316,6 +317,18 @@ public class CareflowService {
                 .map(ObservationEntity::getValueNum)
                 .map(BigDecimal::doubleValue)
                 .orElse(null);
+    }
+
+    public Integer latestEgfr(PatientEntity patient) {
+        Double creatinine = latestCreatinine(patient.getId());
+        if (creatinine == null) {
+            return null;
+        }
+        Double egfr = EgfrCalculator.ckdEpi2021(
+                creatinine,
+                Period.between(patient.getBirthDate(), LocalDate.now()).getYears(),
+                patient.getSex());
+        return egfr == null ? null : (int) Math.round(egfr);
     }
 
     private void persistFindings(String patientId, String orderId, List<CdsEngine.Finding> findings, boolean overridden) {

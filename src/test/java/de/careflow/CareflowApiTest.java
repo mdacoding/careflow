@@ -159,6 +159,56 @@ class CareflowApiTest {
         assertThat(secureFlag).as("Secure bleibt aus für lokale HTTP-Demo und Vite-Proxy").isFalse();
     }
 
+    @Test
+    void patientChartExposesCreatinineAndEgfrWhenKreaResulted() throws Exception {
+        mvc.perform(get("/api/patients/" + DemoDataSeeder.MIRA_ID).session(physician))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.creatinineMgDl").isNumber())
+                .andExpect(jsonPath("$.egfrMlMin").isNumber());
+        mvc.perform(get("/api/patients/" + DemoDataSeeder.KARL_ID).session(physician))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.creatinineMgDl").isNumber())
+                .andExpect(jsonPath("$.egfrMlMin").isNumber())
+                .andExpect(jsonPath("$.egfrMlMin").value(org.hamcrest.Matchers.lessThan(60)));
+    }
+
+    @Test
+    void auditContainsLabOrderDtoAfterPhysicianPlacesLab() throws Exception {
+        MvcResult created = mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                        .session(physician)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"BGA\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String orderId = jsonId(created);
+        try {
+            mvc.perform(get("/api/audit").session(physician))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.action=='Laborauftrag übermittelt')]").isNotEmpty())
+                    .andExpect(jsonPath("$[0].id").exists())
+                    .andExpect(jsonPath("$[0].actor").exists())
+                    .andExpect(jsonPath("$[0].actorRole").exists())
+                    .andExpect(jsonPath("$[0].createdAt").exists());
+        } finally {
+            mvc.perform(post("/api/orders/" + orderId + "/cancel").session(physician))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    void fhirObservationSearchFiltersByPatient() {
+        ResponseEntity<String> filtered = rest.getForEntity(
+                "/fhir/Observation?patient=" + DemoDataSeeder.MIRA_ID + "&_format=json", String.class);
+        assertThat(filtered.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(filtered.getBody()).contains("Observation");
+        assertThat(filtered.getBody()).contains(DemoDataSeeder.MIRA_ID);
+        assertThat(filtered.getBody()).doesNotContain("MKN-10021");
+
+        ResponseEntity<String> patients = rest.getForEntity("/fhir/Patient?_format=json", String.class);
+        assertThat(patients.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(patients.getBody()).contains("Bundle").contains("Patient");
+    }
+
     private MockHttpSession session(String username) throws Exception {
         MvcResult result = mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

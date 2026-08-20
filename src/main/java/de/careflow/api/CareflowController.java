@@ -2,11 +2,9 @@ package de.careflow.api;
 
 import de.careflow.catalog.Catalog;
 import de.careflow.demo.DemoDataSeeder;
-import de.careflow.domain.AuditEventEntity;
 import de.careflow.domain.ClinicalOrderEntity;
 import de.careflow.domain.EncounterEntity;
 import de.careflow.domain.Hl7MessageEntity;
-import de.careflow.domain.ObservationEntity;
 import de.careflow.domain.PatientEntity;
 import de.careflow.fhir.FhirMapper;
 import de.careflow.security.StaffDirectory;
@@ -110,6 +108,8 @@ public class CareflowController {
                 patient.getAcuity(),
                 encounter.getId(),
                 encounter.getAdmittedAt(),
+                careflow.latestCreatinine(id),
+                careflow.latestEgfr(patient),
                 careflow.allergiesOf(id).stream()
                         .map(allergy -> new AllergyView(allergy.getSubstance(), allergy.getAtcPrefix(), allergy.getCriticality()))
                         .toList(),
@@ -187,8 +187,18 @@ public class CareflowController {
     }
 
     @GetMapping("/audit")
-    public List<AuditEventEntity> audit() {
-        return auditService.recent();
+    public List<AuditView> audit() {
+        return auditService.recent().stream()
+                .map(event -> new AuditView(
+                        event.getId(),
+                        event.getActor(),
+                        event.getActorRole(),
+                        event.getAction(),
+                        event.getEntityType(),
+                        event.getEntityId(),
+                        event.getDetail(),
+                        event.getCreatedAt()))
+                .toList();
     }
 
     private OrderView toOrder(ClinicalOrderEntity order) {
@@ -318,9 +328,22 @@ public class CareflowController {
             String acuity,
             String encounterId,
             Instant admittedAt,
+            Double creatinineMgDl,
+            Integer egfrMlMin,
             List<AllergyView> allergies,
             List<OrderView> orders,
             List<AlertView> alerts) {
+    }
+
+    public record AuditView(
+            String id,
+            String actor,
+            String actorRole,
+            String action,
+            String entityType,
+            String entityId,
+            String detail,
+            Instant createdAt) {
     }
 
     public record WorklistItem(
