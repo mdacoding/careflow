@@ -100,7 +100,7 @@ export function PatientView({
         )}
         {role === "NURSE" && (
           <p className="nurse-cpoe" role="status">
-            Pflege hat kein CPOE (nur Lesen, RBAC).
+            Pflege: kein CPOE, Akte nur lesend (RBAC).
           </p>
         )}
         {role === "LAB" && (

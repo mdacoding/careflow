@@ -1,6 +1,6 @@
 const FALLBACK_STEPS = [
   "Als Ärztin anmelden, Stationsboard Innere 3",
-  "Elena Krüger öffnen (Demo-Fall, Allergie Penicillin)",
+  "Elena Krüger öffnen (Allergie Penicillin, Verdacht ambulant erworbene Pneumonie)",
   "Laborauftrag Blutbild + CRP → HL7 ORM^O01",
   "Labor: Auftrag annehmen, Befund freigeben → ORU^R01",
   "CRP pathologisch; Amoxicillin — AMTS sperrt (ATC J01C)",
@@ -15,7 +15,7 @@ export function demoHint(step: number, view: string, role: string, overlapVisibl
     return "Elena Krüger (Demo-Fall, Bett 12) auf dem Stationsboard öffnen.";
   }
   if (step <= 2 && view === "patient") {
-    return "Blutbild + CRP übermitteln. Ein zweites Panel derselben Messung → HTTP 409, überlappendes Laborpanel.";
+    return "Blutbild + CRP anordnen. Ein zweites Panel derselben Messung → HTTP 409, überlappendes Laborpanel.";
   }
   if (step === 3 && view !== "lab") {
     return "Rolle Labor wählen — Auftrag annehmen und Befund freigeben (ORU^R01).";
@@ -27,7 +27,7 @@ export function demoHint(step: number, view: string, role: string, overlapVisibl
     return "Als Ärztin in die Akte zurück — als Nächstes Amoxicillin (AMTS-Sperre).";
   }
   if (step === 4) {
-    return "Amoxicillin anstoßen: HTTP 409 AMTS-Sperre wegen Allergie Penicillin (ATC J01C).";
+    return "Amoxicillin anordnen: HTTP 409 AMTS-Sperre wegen Allergie Penicillin (ATC J01C).";
   }
   if (step === 5) {
     return "Cefuroxim verordnen (Hinweis Kreuzallergie β-Laktam), danach HL7 / FHIR öffnen.";
@@ -71,8 +71,8 @@ export function DemoGuide({
         </div>
       )}
       <p className="muted" style={{ marginTop: 16 }}>
-        Synthetische Demodaten, fiktives Musterklinikum Nord. Fall: Elena Krüger, Allergie Penicillin, Verdacht
-        Pneumonie.
+        Synthetische Demodaten, fiktives Musterklinikum Nord. Fall: Elena Krüger, Allergie Penicillin, Verdacht auf
+        ambulant erworbene Pneumonie.
       </p>
       <p className="muted">
         Optionaler zweiter Fall: Karl-Heinz Vogt (NSAR / CKD-EPI) — nicht der 5-Minuten-Pfad.

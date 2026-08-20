@@ -56,7 +56,7 @@ public class CareflowController {
                 "safeMed", "CEFU",
                 "steps", List.of(
                         "Als Ärztin anmelden, Stationsboard Innere 3",
-                        "Elena Krüger öffnen (Demo-Fall, Allergie Penicillin)",
+                        "Elena Krüger öffnen (Allergie Penicillin, Verdacht ambulant erworbene Pneumonie)",
                         "Laborauftrag Blutbild + CRP → HL7 ORM^O01",
                         "Labor: Auftrag annehmen, Befund freigeben → ORU^R01",
                         "CRP pathologisch; Amoxicillin — AMTS sperrt (ATC J01C)",

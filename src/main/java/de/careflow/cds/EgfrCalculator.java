@@ -1,7 +1,7 @@
 package de.careflow.cds;
 
 /**
- * CKD-EPI Kreatinin 2021 ohne Race-Korrektur, Einheit mL/min/1,73 m².
+ * CKD-EPI Kreatinin 2021 ohne Ethnizitätskorrektur, Einheit mL/min/1,73 m².
  */
 public final class EgfrCalculator {
 

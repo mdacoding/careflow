@@ -16,7 +16,7 @@ Spring-Boot-Backend und React/TypeScript-UI in einem Repository; der UI-Build li
 ## 5-Minuten-Demo
 
 1. **Dr. med. Lena Weber** (Passwort `demo`).
-2. **Elena Krüger** — Bett 12, Allergie Penicillin, Verdacht Pneumonie.
+2. **Elena Krüger** — Bett 12, Allergie Penicillin, Verdacht auf ambulant erworbene Pneumonie.
 3. Laborauftrag **Blutbild + CRP** → `ORM^O01` plus ACK.
 4. Rolle Labor: annehmen, **Befund freigeben** → `ORU^R01`.
 5. CRP pathologisch. **Amoxicillin** → AMTS-Sperre (ATC-Hierarchie J01C).
@@ -41,8 +41,6 @@ Akte, Labor-Worklist und Pflege-RBAC: `docs/screenshots/03-akte-elena.png`, `doc
 ## Live-Demo
 
 Öffentliche Demo auf Render Free: **https://careflow-1-s5lg.onrender.com**
-
-Nur diese Adresse (Render-Suffix `-s5lg`). `careflow.onrender.com` und `careflow-1.onrender.com` gehören **nicht** zu diesem Dienst.
 
 Render Free schläft nach Idle. Der **erste Request** danach kann **30–60 Sekunden** dauern (Cold Start) — das ist kein Fehler. Danach Login-Seite Musterklinikum Nord. H2 startet leer; der Seeder legt sechs Fälle an.
 
@@ -82,7 +80,7 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 - Optimistic Locking sichtbar als HTTP 409 `OPTIMISTIC_LOCK`
 - AMTS-Regelengine: ATC-Hierarchie (Allergie-Prefix, chemische 5-Stellen-Gruppe), Kreuzallergie J01C/J01D, NSAR bei Herzinsuffizienz
 - AMTS-Sperre (HTTP 409 `CDS_BLOCK`) kann die Ärztin dokumentiert überschreiben (`override`): Auftrag bleibt `BLOCKED`, Audit/Alert `overridden`. Der 5-Minuten-Pfad nimmt Cefuroxim, nicht den Override.
-- Niere: CKD-EPI Kreatinin 2021 (ohne Race), NSAR-Block bei eGFR unter 30, Warnung unter 60
+- Niere: CKD-EPI Kreatinin 2021 (ohne Ethnizitätskorrektur), NSAR-Block bei eGFR unter 30, Warnung unter 60
 - Befundflags HL7 0078 (N/L/H/LL/HH) inkl. LOINC-Panic-Grenzen
 - Offene Doppel-Laboraufträge und überlappende Panels (BBCRP ⊃ BB/CRP): HTTP 409
 - Stationsboard, Akte und Labor-Worklist in einem Roundtrip (kein N+1)
