@@ -59,18 +59,20 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 
 **Fachlogik**
 - Auftrags-Zustandsmaschine (LAB: PLACED → IN_LAB → RESULTED; MED: ACTIVE / BLOCKED)
+- Storno: LAB in PLACED/IN_LAB und MED in ACTIVE → CANCELLED
+- Optimistic Locking sichtbar als HTTP 409 `OPTIMISTIC_LOCK`
 - AMTS-Regelengine: ATC-Hierarchie (Allergie-Prefix, chemische 5-Stellen-Gruppe), Kreuzallergie J01C/J01D, NSAR bei Herzinsuffizienz
 - Niere: CKD-EPI Kreatinin 2021 (ohne Race), NSAR-Block bei eGFR unter 30, Warnung unter 60
 - Befundflags HL7 0078 (N/L/H/LL/HH) inkl. LOINC-Panic-Grenzen
 - Offene Doppel-Laboraufträge und überlappende Panels (BBCRP ⊃ BB/CRP): HTTP 409
-- Stationsboard in einem Roundtrip (kein N+1)
+- Stationsboard, Akte und Labor-Worklist in einem Roundtrip (kein N+1)
 
 **Frontend**
 - React 19, TypeScript, Vite 6
 - Produktionsbuild im selben JAR
 
 **Qualität / Betrieb**
-- JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine, HL7-Roundtrip, API (AMTS-Sperre, RBAC)
+- JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, RBAC, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR `?patient=`)
 - GitHub Actions (CI grün): Temurin 21, Node 22, Free Runner
 - Docker Multi-Stage; Render Free, ein Dienst, H2 im Speicher
 
