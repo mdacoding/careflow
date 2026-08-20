@@ -30,6 +30,34 @@ function liveWording(event: WsEvent): string {
   return LIVE_WORDING[event.type] ?? event.message ?? event.type;
 }
 
+const ORC_LABEL: Record<string, string> = {
+  NW: "Auftrag neu",
+  SC: "in Analytik",
+  CA: "storniert",
+  CM: "befundet (ORU)",
+};
+
+const ORC_CHIP: Record<string, string> = {
+  NW: "status-PLACED",
+  SC: "status-IN_LAB",
+  CA: "status-CANCELLED",
+  CM: "status-RESULTED",
+};
+
+/** First `ORC|XX` in the raw HL7 pipe message. ACK has no ORC segment. */
+function parseOrcControl(raw: string): string | undefined {
+  return /ORC\|([A-Z]{2})/.exec(raw)?.[1];
+}
+
+function OrcChip({ raw }: { raw: string }) {
+  const code = parseOrcControl(raw);
+  const label = code ? ORC_LABEL[code] : undefined;
+  if (!code || !label) {
+    return null;
+  }
+  return <span className={`chip ${ORC_CHIP[code] ?? ""}`}>{label}</span>;
+}
+
 /** CPOE Storno: LAB in PLACED/IN_LAB, MED in ACTIVE. Not BLOCKED, RESULTED, CANCELLED. */
 function isCancellable(order: OrderView): boolean {
   if (order.kind === "LAB") {
@@ -814,6 +842,7 @@ export default function App() {
                       <th>Zeit</th>
                       <th>Richtung</th>
                       <th>Typ</th>
+                      <th>ORC</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -828,6 +857,9 @@ export default function App() {
                         <td>{message.direction === "OUTBOUND" ? "Ausgang" : "Eingang"}</td>
                         <td>
                           {message.messageType} {message.ackCode ?? ""}
+                        </td>
+                        <td>
+                          <OrcChip raw={message.raw} />
                         </td>
                       </tr>
                     ))}

@@ -39,6 +39,7 @@ Nach dem Deploy (Render Free schläft nach Idle; erster Request dauert länger; 
 | Stationsarbeitsplatz | `/` |
 | FHIR Patient | `/fhir/Patient?_format=json` |
 | FHIR Observation | `/fhir/Observation?patient={id}&_format=json` |
+| FHIR metadata | `/fhir/metadata?_format=json` |
 | OpenAPI | `/swagger-ui.html` |
 | Health | `/actuator/health` |
 
@@ -53,7 +54,7 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 - springdoc-openapi
 
 **Interop**
-- HAPI HL7 v2.5: `ORM^O01`, `ORU^R01`, `ACK` (PipeParser, ohne Validating)
+- HAPI HL7 v2.5: `ORM^O01` (ORC NW / SC / CA), `ORU^R01` (ORC CM), `ACK` (PipeParser, ohne Validating)
 - HAPI FHIR 7.6 R4 RestfulServer: Patient, Encounter, AllergyIntolerance, ServiceRequest, Observation, DiagnosticReport, MedicationRequest
 - FHIR Collection-Bundle je Akte unter `/api/patients/{id}/fhir`
 
@@ -70,14 +71,14 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 **Frontend**
 - React 19, TypeScript, Vite 6
 - Produktionsbuild im selben JAR
-- WebSocket-Ereignisse in der UI; HL7-Storno als ORM CA
+- WebSocket-Ereignisse in der UI nur mit Session; HL7-Storno als ORM CA
 
 **Qualität / Betrieb**
-- JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, RBAC, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR `?patient=`)
+- JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, RBAC, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR `?patient=`, CapabilityStatement)
 - GitHub Actions (CI grün): Temurin 21, Node 22, Free Runner
 - Docker Multi-Stage; Render Free, ein Dienst, H2 im Speicher
 
-Kein Kafka, kein Keycloak, keine bezahlte Arzneimittel-DB.
+Kein Kafka, kein STOMP, kein Keycloak, keine bezahlte Arzneimittel-DB.
 
 ## Architektur
 
