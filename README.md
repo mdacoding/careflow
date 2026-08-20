@@ -56,7 +56,7 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 **Interop**
 - HAPI HL7 v2.5: `ORM^O01` (ORC NW / SC / CA), `ORU^R01` (ORC CM), `ACK` (PipeParser, ohne Validating)
 - Ausgang ORM NW/CA von CAREFLOW, Eingang SC/ORU von LABSYS, ACK jeweils vom Empfänger. FHIR-Suche gebatched.
-- HAPI FHIR 7.6 R4 RestfulServer: Patient, Encounter, AllergyIntolerance, ServiceRequest, Observation, DiagnosticReport, MedicationRequest
+- HAPI FHIR 7.6 R4 RestfulServer als Lese-Projektion (Search/Read/metadata), kein Create: Patient, Encounter, AllergyIntolerance, ServiceRequest, Observation, DiagnosticReport, MedicationRequest
 - FHIR Collection-Bundle je Akte unter `/api/patients/{id}/fhir`
 
 **Fachlogik**
@@ -64,6 +64,7 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 - Storno: LAB in PLACED/IN_LAB und MED in ACTIVE → CANCELLED
 - Optimistic Locking sichtbar als HTTP 409 `OPTIMISTIC_LOCK`
 - AMTS-Regelengine: ATC-Hierarchie (Allergie-Prefix, chemische 5-Stellen-Gruppe), Kreuzallergie J01C/J01D, NSAR bei Herzinsuffizienz
+- AMTS-Sperre (HTTP 409 `CDS_BLOCK`) kann die Ärztin dokumentiert überschreiben (`override`): Auftrag bleibt `BLOCKED`, Audit/Alert `overridden`. Der 5-Minuten-Pfad nimmt Cefuroxim, nicht den Override.
 - Niere: CKD-EPI Kreatinin 2021 (ohne Race), NSAR-Block bei eGFR unter 30, Warnung unter 60
 - Befundflags HL7 0078 (N/L/H/LL/HH) inkl. LOINC-Panic-Grenzen
 - Offene Doppel-Laboraufträge und überlappende Panels (BBCRP ⊃ BB/CRP): HTTP 409
@@ -75,7 +76,9 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 - WebSocket-Ereignisse in der UI nur mit Session; HL7-Storno als ORM CA
 
 **Qualität / Betrieb**
-- JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, RBAC, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR `?patient=`, CapabilityStatement)
+- Bean Validation: ungültiger Request → HTTP 400 `VALIDATION`
+- Demo-Session: 8 Stunden
+- JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, Override `BLOCKED`/`overridden`, VALIDATION 400, RBAC, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR Search/Read ohne Create, CapabilityStatement)
 - GitHub Actions (CI grün): Temurin 21, Node 22, Free Runner
 - Docker Multi-Stage; Render Free, ein Dienst, H2 im Speicher
 
@@ -93,7 +96,7 @@ flowchart LR
   SM --> FHIR[FHIR R4 Projektion]
 ```
 
-Eine Akte, drei Sichten: Station, Labor, Schnittstelle. FHIR ist Projektion, nicht zweites Primärsystem.
+Eine Akte, drei Sichten: Station, Labor, Schnittstelle. FHIR ist Lese-Projektion (Search/Read/metadata), nicht zweites Primärsystem.
 
 ## Lokal starten
 
