@@ -3,7 +3,32 @@ import { api, asApiError, isAmtsBlock, isIllegalState, isLabOverlap, isOptimisti
 import { AuditLog } from "./AuditLog";
 import { DemoGuide, demoHint } from "./DemoGuide";
 import { interpLabel, StatusChip } from "./StatusChip";
-import type { AuditEvent, Catalog, CdsError, DemoInfo, Hl7View, OrderView, PatientChart, Staff, WardCard, WorklistItem } from "./types";
+import type { AuditEvent, Catalog, CdsError, DemoInfo, Hl7View, OrderView, PatientChart, Staff, WardCard, WorklistItem, WsEvent } from "./types";
+
+const LIVE_WORDING: Record<string, string> = {
+  ORDER_PLACED: "Laborauftrag übermittelt",
+  ORDER_ACCEPTED: "Laborauftrag angenommen",
+  RESULT_READY: "Befund freigegeben",
+  MEDICATION_BLOCKED: "AMTS-Sperre",
+  MEDICATION_ORDERED: "Verordnung aktiv",
+  ORDER_CANCELLED: "Auftrag storniert",
+};
+
+function parseWsEvent(raw: string): WsEvent | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || typeof (parsed as WsEvent).type !== "string") {
+      return null;
+    }
+    return parsed as WsEvent;
+  } catch {
+    return null;
+  }
+}
+
+function liveWording(event: WsEvent): string {
+  return LIVE_WORDING[event.type] ?? event.message ?? event.type;
+}
 
 /** CPOE Storno: LAB in PLACED/IN_LAB, MED in ACTIVE. Not BLOCKED, RESULTED, CANCELLED. */
 function isCancellable(order: OrderView): boolean {
@@ -48,6 +73,7 @@ export default function App() {
   const [labOverlap, setLabOverlap] = useState(false);
   const [optimisticLock, setOptimisticLock] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [liveEvent, setLiveEvent] = useState<WsEvent | null>(null);
 
   async function refreshWard() {
     setWard(await api.ward());
@@ -105,7 +131,11 @@ export default function App() {
     void refreshContext();
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const socket = new WebSocket(`${protocol}://${window.location.host}/api/ws`);
-    socket.onmessage = () => {
+    socket.onmessage = (event) => {
+      const payload = parseWsEvent(typeof event.data === "string" ? event.data : "");
+      if (payload) {
+        setLiveEvent(payload);
+      }
       void refreshContext();
     };
     return () => socket.close();
@@ -374,51 +404,57 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="brand">
-          <div className="logo">Cf</div>
-          <div>
-            <small>
-              {demo?.clinic} · {demo?.ward}
-            </small>
-            <h1>Careflow</h1>
+      <header>
+        <div className="topbar">
+          <div className="brand">
+            <div className="logo">Cf</div>
+            <div>
+              <small>
+                {demo?.clinic} · {demo?.ward}
+              </small>
+              <h1>Careflow</h1>
+            </div>
           </div>
-        </div>
-        <nav className="nav">
-          <button className={view === "ward" ? "active" : ""} onClick={() => setView("ward")}>
-            Station
-          </button>
-          <button className={view === "lab" ? "active" : ""} onClick={() => setView("lab")}>
-            Labor
-          </button>
-          <button
-            className={view === "interop" ? "active" : ""}
-            onClick={() => {
-              setView("interop");
-              setStep(6);
-            }}
-          >
-            HL7 / FHIR
-          </button>
-        </nav>
-        <div className="who">
-          <strong>{staff.displayName}</strong>
-          <span>{staff.title}</span>
-          <div className="roles">
-            {ROLES.map((role) => (
-              <button
-                key={role.username}
-                className={staff.username === role.username ? "primary" : "ghost"}
-                onClick={() => void enter(role.username)}
-              >
-                {role.label}
-              </button>
-            ))}
-            <button className="ghost" onClick={() => void api.logout().then(() => setStaff(null))}>
-              Abmelden
+          <nav className="nav">
+            <button className={view === "ward" ? "active" : ""} onClick={() => setView("ward")}>
+              Station
             </button>
+            <button className={view === "lab" ? "active" : ""} onClick={() => setView("lab")}>
+              Labor
+            </button>
+            <button
+              className={view === "interop" ? "active" : ""}
+              onClick={() => {
+                setView("interop");
+                setStep(6);
+              }}
+            >
+              HL7 / FHIR
+            </button>
+          </nav>
+          <div className="who">
+            <strong>{staff.displayName}</strong>
+            <span>{staff.title}</span>
+            <div className="roles">
+              {ROLES.map((role) => (
+                <button
+                  key={role.username}
+                  className={staff.username === role.username ? "primary" : "ghost"}
+                  onClick={() => void enter(role.username)}
+                >
+                  {role.label}
+                </button>
+              ))}
+              <button className="ghost" onClick={() => void api.logout().then(() => setStaff(null))}>
+                Abmelden
+              </button>
+            </div>
           </div>
         </div>
+        <p className="live-line" aria-live="polite">
+          <span className="kicker">Live</span>
+          <b>{liveEvent ? liveWording(liveEvent) : "—"}</b>
+        </p>
       </header>
       <div className="shell">
         <main>
@@ -429,8 +465,16 @@ export default function App() {
             </strong>
             <span>{hint}</span>
           </div>
-          {flash && <p className="flash">{flash}</p>}
-          {illegalFlash && <p className="flash flash-warn">{illegalFlash}</p>}
+          {flash && (
+            <p className="flash" role="status" aria-live="polite">
+              {flash}
+            </p>
+          )}
+          {illegalFlash && (
+            <p className="flash flash-warn" role="status" aria-live="polite">
+              {illegalFlash}
+            </p>
+          )}
           {view === "ward" && (
             <>
               <section className="stats">
@@ -546,7 +590,7 @@ export default function App() {
                 )}
               </section>
               {labOverlap && (
-                <section className="alert overlap">
+                <section className="alert overlap" role="status" aria-live="polite">
                   <div className="kicker">HTTP 409</div>
                   <strong>Überlappendes Laborpanel</strong>
                   <p>
@@ -556,7 +600,7 @@ export default function App() {
                 </section>
               )}
               {optimisticLock && (
-                <section className="alert lock">
+                <section className="alert lock" role="status" aria-live="polite">
                   <div className="kicker">HTTP 409 · Optimistic Lock</div>
                   <strong>Auftrag wurde parallel geändert</strong>
                   <p>Auftrag wurde parallel geändert, bitte neu laden.</p>
@@ -574,7 +618,7 @@ export default function App() {
                 </section>
               )}
               {cds && (
-                <section className="alert">
+                <section className="alert" role="alert" aria-live="assertive">
                   <div className="kicker">HTTP 409 · CDS</div>
                   <strong>AMTS-Sperre</strong>
                   <p>{cds.alerts[0]?.message ?? cds.message}</p>

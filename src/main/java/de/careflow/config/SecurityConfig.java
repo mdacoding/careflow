@@ -57,7 +57,6 @@ public class SecurityConfig {
                 .securityContext(context -> context.securityContextRepository(contextRepository))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/api/auth/me").permitAll()
-                        .requestMatchers("/api/ws").permitAll()
                         .requestMatchers("/fhir/**", "/actuator/health", "/h2/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.GET, "/", "/assets/**", "/index.html", "/*.svg", "/favicon.ico")

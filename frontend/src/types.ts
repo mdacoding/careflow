@@ -140,6 +140,15 @@ export interface CdsError {
   alerts: CdsAlertView[];
 }
 
+/** Native WebSocket payload from `/api/ws` (plain JSON, not STOMP). */
+export interface WsEvent {
+  type: string;
+  patientId?: string;
+  orderId?: string;
+  message?: string;
+  at?: string;
+}
+
 /** Spring JSON error, ProblemDetail, or Careflow CDS_BLOCK body. */
 export interface ApiErrorBody {
   error?: string;

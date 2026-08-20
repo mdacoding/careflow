@@ -70,6 +70,7 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 **Frontend**
 - React 19, TypeScript, Vite 6
 - Produktionsbuild im selben JAR
+- WebSocket-Ereignisse in der UI; HL7-Storno als ORM CA
 
 **Qualität / Betrieb**
 - JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, RBAC, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR `?patient=`)
