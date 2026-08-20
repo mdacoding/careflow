@@ -112,8 +112,25 @@ export interface DemoInfo {
   steps: string[];
 }
 
+export interface CdsAlertView {
+  ruleId: string;
+  severity: string;
+  title: string;
+  message: string;
+}
+
 export interface CdsError {
   error: string;
   message: string;
-  alerts: { ruleId: string; severity: string; title: string; message: string }[];
+  alerts: CdsAlertView[];
+}
+
+/** Spring JSON error, ProblemDetail, or Careflow CDS_BLOCK body. */
+export interface ApiErrorBody {
+  error?: string;
+  message?: string;
+  detail?: string;
+  title?: string;
+  status?: number;
+  alerts?: CdsAlertView[];
 }

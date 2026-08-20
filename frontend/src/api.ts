@@ -1,6 +1,7 @@
 import type {
+  ApiErrorBody,
   Catalog,
-  CdsError,
+  CdsAlertView,
   DemoInfo,
   Hl7View,
   OrderView,
@@ -9,6 +10,34 @@ import type {
   WardCard,
   WorklistItem,
 } from "./types";
+
+export type CareflowRequestError = Error & { payload?: ApiErrorBody; status: number };
+
+export function asApiError(error: unknown): {
+  status: number;
+  code: string;
+  message: string;
+  alerts: CdsAlertView[];
+} {
+  const err = error as CareflowRequestError;
+  const payload = err.payload;
+  return {
+    status: err.status ?? 0,
+    code: payload?.error ?? "",
+    message: payload?.message ?? payload?.detail ?? err.message ?? "Unbekannter Fehler",
+    alerts: payload?.alerts ?? [],
+  };
+}
+
+export function isAmtsBlock(error: unknown): boolean {
+  return asApiError(error).code === "CDS_BLOCK";
+}
+
+/** HTTP 409 on lab CPOE: open order already covers the same analytes (BBCRP ⊃ BB/CRP). */
+export function isLabOverlap(error: unknown): boolean {
+  const { status, code } = asApiError(error);
+  return status === 409 && code !== "CDS_BLOCK" && code !== "OPTIMISTIC_LOCK";
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -22,8 +51,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
   if (!response.ok) {
-    const error = new Error(data?.message ?? response.statusText) as Error & { payload?: CdsError; status: number };
-    error.payload = data;
+    const body = data as ApiErrorBody | null;
+    const error = new Error(body?.message ?? body?.detail ?? response.statusText) as CareflowRequestError;
+    error.payload = body ?? undefined;
     error.status = response.status;
     throw error;
   }
