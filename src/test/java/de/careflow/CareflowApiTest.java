@@ -11,6 +11,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpSession;
@@ -21,6 +22,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -407,6 +410,35 @@ class CareflowApiTest {
         assertThat(health.getHeaders().getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
         assertThat(health.getHeaders().getFirst("Referrer-Policy")).isEqualTo("strict-origin-when-cross-origin");
         assertThat(health.getHeaders().getFirst("X-Frame-Options")).isEqualTo("SAMEORIGIN");
+    }
+
+    @Test
+    void corsAllowsRenderOriginOnHealth() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Origin", "https://careflow.onrender.com");
+        ResponseEntity<String> health = rest.exchange(
+                "/actuator/health", HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        assertThat(health.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(health.getHeaders().getAccessControlAllowOrigin()).isEqualTo("https://careflow.onrender.com");
+        assertThat(health.getHeaders().getAccessControlAllowCredentials()).isTrue();
+    }
+
+    @Test
+    void spaIndexHtmlDeclaresOpenGraphForLiveDemo() throws Exception {
+        String html = Files.readString(Path.of("frontend/index.html"));
+        assertThat(html).contains("og:title");
+        assertThat(html).contains("Careflow");
+        assertThat(html).contains("Musterklinikum Nord");
+        assertThat(html).contains("https://careflow.onrender.com");
+        assertThat(html).contains("index,follow");
+    }
+
+    @Test
+    void robotsTxtAllowsIndexing() throws Exception {
+        String robots = Files.readString(Path.of("frontend/public/robots.txt"));
+        assertThat(robots).contains("User-agent: *");
+        assertThat(robots).contains("Allow: /");
+        assertThat(robots).doesNotContain("Disallow: /");
     }
 
     private MockHttpSession session(String username) throws Exception {

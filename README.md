@@ -5,7 +5,7 @@ Klinischer **Stationsarbeitsplatz** (CPOE) für das fiktive Musterklinikum Nord:
 Spring-Boot-Backend und React/TypeScript-UI in einem Repository; der UI-Build liegt im JAR unter `/`.
 
 [![CI](https://github.com/mdacoding/careflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mdacoding/careflow/actions/workflows/ci.yml)
-[![Render Free](https://img.shields.io/badge/Deploy-Render%20Free-1a7a6d)](https://render.com/deploy?repo=https://github.com/mdacoding/careflow)
+[![Live](https://img.shields.io/badge/Live-Render%20Free-1a7a6d)](https://careflow.onrender.com)
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-brightgreen)
 ![React](https://img.shields.io/badge/React-19-61dafb)
@@ -40,20 +40,22 @@ Akte und Labor-Worklist: `docs/screenshots/03-akte-elena.png`, `docs/screenshots
 
 ## Live-Demo
 
-Noch keine öffentliche Instanz: `careflow.onrender.com` antwortet mit 404, solange das Render-Blueprint nicht verbunden ist. Deploy auf Render Free:
+Öffentliche Demo auf Render Free: **https://careflow.onrender.com**
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/mdacoding/careflow)
+Render Free schläft nach Idle. Der **erste Request** danach kann **30–60 Sekunden** dauern (Cold Start) — das ist kein Fehler. Danach Login-Seite Musterklinikum Nord. H2 startet leer; der Seeder legt sechs Fälle an.
 
-Nach dem Deploy (Render Free schläft nach Idle; erster Request dauert länger; H2 startet leer, Seeder legt sechs Fälle an):
+Kennungen (Passwort überall `demo`): `weber` Ärztin, `hoffmann` MTA, `schmidt` Pflege. RBAC: Pflege ohne CPOE.
 
-| Einstieg | Pfad |
+5-Minuten-Pfad auf der Live-Instanz: **Dr. med. Lena Weber** → **Elena Krüger** (Bett 12) → Laborauftrag **Blutbild + CRP** → Rolle Labor, Befund freigeben → **Amoxicillin** (AMTS-Sperre) → **Cefuroxim** → Ansicht **HL7 / FHIR**.
+
+| Einstieg | URL |
 |---|---|
-| Stationsarbeitsplatz | `/` |
-| FHIR Patient | `/fhir/Patient?_format=json` |
-| FHIR Observation | `/fhir/Observation?patient={id}&_format=json` |
-| FHIR metadata | `/fhir/metadata?_format=json` |
-| OpenAPI | `/swagger-ui.html` |
-| Health | `/actuator/health` |
+| Stationsarbeitsplatz | https://careflow.onrender.com/ |
+| FHIR Patient | https://careflow.onrender.com/fhir/Patient?_format=json |
+| FHIR Observation | https://careflow.onrender.com/fhir/Observation?patient={id}&_format=json |
+| FHIR metadata | https://careflow.onrender.com/fhir/metadata?_format=json |
+| OpenAPI | https://careflow.onrender.com/swagger-ui.html |
+| Health | https://careflow.onrender.com/actuator/health |
 
 Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 
@@ -99,7 +101,8 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 - JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, Override `BLOCKED`/`overridden`, VALIDATION 400, RBAC Pflege ohne CPOE/Laborannahme/Freigabe, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR Search/Read ohne Create, CapabilityStatement)
 - GitHub Actions (CI grün): Temurin 21, Node 22, Free Runner
 - Docker Multi-Stage; Render Free, ein Dienst, H2 im Speicher
-- Live-URL `careflow.onrender.com` bleibt 404, bis das Render-Blueprint verbunden ist
+- Live-Demo: https://careflow.onrender.com (Cold Start nach Idle 30–60 s)
+- SPA indexierbar (`robots.txt` Allow `/`); Open Graph für geteilte Links
 
 Kein Kafka, kein STOMP, kein Keycloak, keine bezahlte Arzneimittel-DB.
 
