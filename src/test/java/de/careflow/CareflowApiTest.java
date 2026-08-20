@@ -252,6 +252,26 @@ class CareflowApiTest {
         assertThat(patients.getBody()).contains("Bundle").contains("Patient");
     }
 
+    @Test
+    void fhirMetadataReturnsCapabilityStatementUnauthenticated() throws Exception {
+        ResponseEntity<String> metadata = rest.getForEntity("/fhir/metadata?_format=json", String.class);
+        assertThat(metadata.getStatusCode().is2xxSuccessful()).isTrue();
+        String resourceType = JsonMapper.builder().build()
+                .readTree(metadata.getBody())
+                .path("resourceType")
+                .asText();
+        assertThat(resourceType).isEqualTo("CapabilityStatement");
+    }
+
+    @Test
+    void healthResponseIncludesNosniffAndReferrerPolicy() {
+        ResponseEntity<String> health = rest.getForEntity("/actuator/health", String.class);
+        assertThat(health.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(health.getHeaders().getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
+        assertThat(health.getHeaders().getFirst("Referrer-Policy")).isEqualTo("strict-origin-when-cross-origin");
+        assertThat(health.getHeaders().getFirst("X-Frame-Options")).isEqualTo("SAMEORIGIN");
+    }
+
     private MockHttpSession session(String username) throws Exception {
         MvcResult result = mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
