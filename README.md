@@ -54,6 +54,7 @@ Kennungen (Passwort überall `demo`): `weber` Ärztin, `hoffmann` MTA, `schmidt`
 |---|---|
 | Stationsarbeitsplatz | https://careflow-1-s5lg.onrender.com/ |
 | FHIR Patient | https://careflow-1-s5lg.onrender.com/fhir/Patient?_format=json |
+| FHIR Patient (MRN Elena) | https://careflow-1-s5lg.onrender.com/fhir/Patient?identifier=MKN-10021&_format=json |
 | FHIR Observation | https://careflow-1-s5lg.onrender.com/fhir/Observation?patient={id}&_format=json |
 | FHIR metadata | https://careflow-1-s5lg.onrender.com/fhir/metadata?_format=json |
 | OpenAPI | https://careflow-1-s5lg.onrender.com/swagger-ui.html |
@@ -72,7 +73,7 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 **Interop**
 - HAPI HL7 v2.5: `ORM^O01` (ORC NW / SC / CA), `ORU^R01` (ORC CM), `ACK` (PipeParser, ohne Validating)
 - Ausgang ORM NW/CA von CAREFLOW, Eingang SC/ORU von LABSYS, ACK jeweils vom Empfänger. FHIR-Suche gebatched.
-- HAPI FHIR 7.6 R4 RestfulServer als Lese-Projektion (Search/Read/metadata), kein Create: Patient, Encounter, AllergyIntolerance, ServiceRequest, Observation, DiagnosticReport, MedicationRequest
+- HAPI FHIR 7.6 R4 RestfulServer als Lese-Projektion (Search/Read/metadata), kein Create: Patient (auch `identifier`/MRN), Encounter, AllergyIntolerance, ServiceRequest, Observation, DiagnosticReport, MedicationRequest
 - FHIR Collection-Bundle je Akte unter `/api/patients/{id}/fhir`
 
 **Fachlogik**
@@ -100,7 +101,7 @@ Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 - CSRF absichtlich aus (Cookie-SPA + Vite-Proxy); Session HttpOnly + SameSite=Lax; `Secure` im Docker/Render-Betrieb, lokal HTTP ohne Secure
 - WebSocket-Origins: localhost und `https://*.onrender.com` (kein `*`)
 - Demo-Session: 8 Stunden
-- JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, Override `BLOCKED`/`overridden`, VALIDATION 400, RBAC Pflege ohne CPOE/Laborannahme/Freigabe, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR Search/Read ohne Create, CapabilityStatement)
+- JUnit 5: ATC, CKD-EPI, Referenzbereich, Zustandsmaschine/Storno, HL7-Roundtrip, API (AMTS-Sperre, Override `BLOCKED`/`overridden`, VALIDATION 400, RBAC Pflege ohne CPOE/Laborannahme/Freigabe, Overlap 409, SameSite-Cookie, Kreatinin/eGFR, Audit-DTO, FHIR Search inkl. Patient `identifier`/MRN, Read ohne Create, CapabilityStatement)
 - GitHub Actions (CI grün): Temurin 21, Node 22, Free Runner
 - Docker Multi-Stage; Render Free, ein Dienst, H2 im Speicher; Tomcat auf `0.0.0.0` / IPv4 (Health-Check findet den Port)
 - Live-Demo: https://careflow-1-s5lg.onrender.com (Cold Start nach Idle 30–60 s)

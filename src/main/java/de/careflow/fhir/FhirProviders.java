@@ -5,6 +5,7 @@ import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.param.ReferenceParam;
+import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
@@ -51,8 +52,11 @@ public final class FhirProviders {
         }
 
         @Search
-        public List<Patient> search() {
-            return mapper.allPatients();
+        public List<Patient> search(@OptionalParam(name = Patient.SP_IDENTIFIER) TokenParam identifier) {
+            if (identifier == null || identifier.isEmpty()) {
+                return mapper.allPatients();
+            }
+            return mapper.patientsByIdentifier(identifier.getSystem(), identifier.getValue());
         }
     }
 

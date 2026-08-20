@@ -46,6 +46,7 @@ import java.util.stream.Collectors;
 public class FhirMapper {
 
     public static final String PROFILE_PATIENT = "https://gematik.de/fhir/isik/StructureDefinition/ISiKPatient";
+    public static final String MRN_SYSTEM = "https://musterklinikum.example/sid/mrn";
     private final PatientRepository patients;
     private final AllergyRepository allergies;
     private final EncounterRepository encounters;
@@ -73,7 +74,7 @@ public class FhirMapper {
         patient.setId(new IdType("Patient", entity.getId()));
         patient.setMeta(new Meta().addProfile(PROFILE_PATIENT));
         patient.addIdentifier(new Identifier()
-                .setSystem("https://musterklinikum.example/sid/mrn")
+                .setSystem(MRN_SYSTEM)
                 .setValue(entity.getMrn()));
         patient.addName().setFamily(entity.getFamilyName()).addGiven(entity.getGivenName());
         patient.setBirthDate(Date.from(entity.getBirthDate().atStartOfDay(java.time.ZoneOffset.UTC).toInstant()));
@@ -192,6 +193,16 @@ public class FhirMapper {
 
     public List<Patient> allPatients() {
         return patients.findAll().stream().map(this::toPatient).toList();
+    }
+
+    public List<Patient> patientsByIdentifier(String system, String value) {
+        if (value == null || value.isBlank()) {
+            return allPatients();
+        }
+        if (system != null && !system.isBlank() && !MRN_SYSTEM.equals(system)) {
+            return List.of();
+        }
+        return patients.findByMrn(value).map(this::toPatient).stream().toList();
     }
 
     public Patient readPatient(String id) {

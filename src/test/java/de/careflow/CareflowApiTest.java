@@ -404,6 +404,21 @@ class CareflowApiTest {
     }
 
     @Test
+    void fhirPatientSearchFiltersByMrnIdentifier() {
+        ResponseEntity<String> found = rest.getForEntity(
+                "/fhir/Patient?identifier=MKN-10021&_format=json", String.class);
+        assertThat(found.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(found.getBody()).contains("Bundle").contains("MKN-10021").contains("Krüger");
+        assertThat(found.getBody()).doesNotContain("MKN-10024");
+
+        ResponseEntity<String> missing = rest.getForEntity(
+                "/fhir/Patient?identifier=MKN-99999&_format=json", String.class);
+        assertThat(missing.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(missing.getBody()).contains("Bundle");
+        assertThat(missing.getBody()).doesNotContain("MKN-10021");
+    }
+
+    @Test
     void fhirMetadataReturnsCapabilityStatementUnauthenticated() throws Exception {
         ResponseEntity<String> metadata = rest.getForEntity("/fhir/metadata?_format=json", String.class);
         assertThat(metadata.getStatusCode().is2xxSuccessful()).isTrue();
