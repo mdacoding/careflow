@@ -101,8 +101,6 @@ cd frontend && npm run build
 
 http://localhost:8080
 
-Bewerbungs- oder Arbeitgebernotizen nicht unter `docs/` versionieren — nur lokal in `lokal/` (gitignored).
-
 ## Tests
 
 ```bash
