@@ -75,6 +75,7 @@ export default function App() {
   const [optimisticLock, setOptimisticLock] = useState(false);
   const [busy, setBusy] = useState(false);
   const [liveEvent, setLiveEvent] = useState<WsEvent | null>(null);
+  const [liveReconnecting, setLiveReconnecting] = useState(false);
 
   async function refreshWard() {
     setWard(await api.ward());
@@ -130,17 +131,59 @@ export default function App() {
       return;
     }
     void refreshContext();
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const socket = new WebSocket(`${protocol}://${window.location.host}/api/ws`);
-    socket.onmessage = (event) => {
-      const payload = parseWsEvent(typeof event.data === "string" ? event.data : "");
-      if (payload) {
-        setLiveEvent(payload);
+
+    let cancelled = false;
+    let socket: WebSocket | undefined;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let openedOnce = false;
+
+    const connect = () => {
+      if (cancelled) {
+        return;
       }
-      void refreshContext();
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+      socket = new WebSocket(`${protocol}://${window.location.host}/api/ws`);
+      socket.onopen = () => {
+        if (cancelled) {
+          return;
+        }
+        openedOnce = true;
+        setLiveReconnecting(false);
+      };
+      socket.onmessage = (event) => {
+        const payload = parseWsEvent(typeof event.data === "string" ? event.data : "");
+        if (payload) {
+          setLiveEvent(payload);
+        }
+        void refreshContext();
+      };
+      socket.onerror = () => {
+        if (cancelled || !openedOnce) {
+          return;
+        }
+        setLiveReconnecting(true);
+      };
+      socket.onclose = () => {
+        if (cancelled) {
+          return;
+        }
+        if (openedOnce) {
+          setLiveReconnecting(true);
+        }
+        reconnectTimer = setTimeout(connect, 2000);
+      };
     };
-    return () => socket.close();
-    // websocket reconnects when the signed-in user changes
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      if (reconnectTimer !== undefined) {
+        clearTimeout(reconnectTimer);
+      }
+      setLiveReconnecting(false);
+      socket?.close();
+    };
   }, [staff?.username]);
 
   const liveHl7 = useMemo(
@@ -502,7 +545,7 @@ export default function App() {
         </div>
         <p className="live-line" aria-live="polite">
           <span className="kicker">Live</span>
-          <b>{liveEvent ? liveWording(liveEvent) : "—"}</b>
+          <b>{liveReconnecting ? "Verbindung …" : liveEvent ? liveWording(liveEvent) : "—"}</b>
         </p>
       </header>
       <div className="shell">
