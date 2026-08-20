@@ -142,6 +142,29 @@ class CareflowApiTest {
     }
 
     @Test
+    void labAcceptPersistsInboundStatusOrmSc() throws Exception {
+        MvcResult created = mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
+                        .session(physician)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"BGA\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PLACED"))
+                .andReturn();
+        String orderId = jsonId(created);
+        try {
+            mvc.perform(post("/api/lab/orders/" + orderId + "/accept").session(lab))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("IN_LAB"))
+                    .andExpect(jsonPath("$.hl7[*].messageType").value(org.hamcrest.Matchers.hasItem("ORM^O01")))
+                    .andExpect(jsonPath("$.hl7[*].raw").value(
+                            org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("ORC|SC"))));
+        } finally {
+            mvc.perform(post("/api/orders/" + orderId + "/cancel").session(physician))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
     void overlappingLabPanelReturnsConflictWhileTropRemainsAllowed() throws Exception {
         MvcResult created = mvc.perform(post("/api/patients/" + DemoDataSeeder.ELENA_ID + "/orders/lab")
                         .session(physician)

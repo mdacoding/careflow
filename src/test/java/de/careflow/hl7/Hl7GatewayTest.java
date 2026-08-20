@@ -48,5 +48,10 @@ class Hl7GatewayTest {
         assertThat(cancel.messageType()).isEqualTo("ORM^O01");
         assertThat(cancel.raw()).contains("ORC|CA").contains("PLC-TEST");
         assertThat(cancel.raw()).doesNotContain("ORC|NW");
+
+        Hl7Gateway.ParsedMessage status = gateway.statusOrm(patient, order);
+        assertThat(status.messageType()).isEqualTo("ORM^O01");
+        assertThat(status.raw()).contains("ORC|SC").contains("PLC-TEST");
+        assertThat(status.raw()).doesNotContain("ORC|NW");
     }
 }

@@ -252,6 +252,10 @@ public class CareflowService {
         de.careflow.domain.OrderStateMachine.require(order.getKind(), order.getStatus(), OrderStatus.IN_LAB);
         order.setStatus(OrderStatus.IN_LAB);
         order.setAcceptedAt(Instant.now());
+        PatientEntity patient = patient(order.getPatientId());
+        Hl7Gateway.ParsedMessage orm = hl7Gateway.statusOrm(patient, order);
+        persistHl7(order.getId(), "INBOUND", orm);
+        persistHl7(order.getId(), "OUTBOUND", hl7Gateway.ack(orm.controlId(), "O01"));
         auditService.record(staff, "Laborauftrag angenommen", "ClinicalOrder", order.getId(), order.getDisplayName());
         socketHandler.publish("ORDER_ACCEPTED", order.getPatientId(), order.getId(), "Labor hat angenommen");
         return order;

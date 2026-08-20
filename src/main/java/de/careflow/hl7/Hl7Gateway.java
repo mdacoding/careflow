@@ -55,6 +55,10 @@ public class Hl7Gateway {
         return orm(patient, order, "CA");
     }
 
+    public ParsedMessage statusOrm(PatientEntity patient, ClinicalOrderEntity order) {
+        return orm(patient, order, "SC");
+    }
+
     private ParsedMessage orm(PatientEntity patient, ClinicalOrderEntity order, String orderControl) {
         String controlId = nextControl("ORM");
         String ts = TS.format(order.getOrderedAt() == null ? Instant.now() : order.getOrderedAt());
