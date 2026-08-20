@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/careflow}
+    username: ${SPRING_DATASOURCE_USERNAME:careflow}
+    password: ${SPRING_DATASOURCE_PASSWORD:careflow}
+  h2:
+    console:
+      enabled: false
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
