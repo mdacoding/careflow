@@ -1,5 +1,6 @@
 import type {
   ApiErrorBody,
+  AuditEvent,
   Catalog,
   CdsAlertView,
   DemoInfo,
@@ -84,4 +85,5 @@ export const api = {
   releaseLab: (id: string) => request<OrderView>(`/api/lab/orders/${id}/release`, { method: "POST" }),
   messages: () => request<Hl7View[]>("/api/interop/messages"),
   fhir: (id: string) => fetch(`/api/patients/${id}/fhir`, { credentials: "include" }).then((r) => r.text()),
+  audit: () => request<AuditEvent[]>("/api/audit"),
 };

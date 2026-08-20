@@ -22,6 +22,8 @@ Spring-Boot-Backend und React/TypeScript-UI in einem Repository; der UI-Build li
 5. CRP pathologisch. **Amoxicillin** → AMTS-Sperre (ATC-Hierarchie J01C).
 6. **Cefuroxim** → Hinweis Kreuzallergie β-Laktam. Ansicht **HL7 / FHIR**.
 
+Optional zweiter Fall: **Karl-Heinz Vogt**, Herzinsuffizienz NYHA III. **Ibuprofen** → AMTS-Hinweis NSAR; Niere über CKD-EPI, sobald Kreatinin befundet ist.
+
 Kennungen: `weber` Ärztin, `hoffmann` MTA, `schmidt` Pflege — Passwort `demo`. RBAC: Pflege ohne CPOE.
 
 ## Live-Demo
@@ -36,8 +38,11 @@ Nach dem Deploy (Render Free schläft nach Idle; erster Request dauert länger; 
 |---|---|
 | Stationsarbeitsplatz | `/` |
 | FHIR Patient | `/fhir/Patient?_format=json` |
+| FHIR Observation | `/fhir/Observation?patient={id}&_format=json` |
 | OpenAPI | `/swagger-ui.html` |
 | Health | `/actuator/health` |
+
+Akte zeigt Kreatinin/eGFR; Interop das Audit-Protokoll.
 
 ## Tech-Stack
 

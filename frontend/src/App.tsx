@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, asApiError, isAmtsBlock, isLabOverlap } from "./api";
+import { AuditLog } from "./AuditLog";
 import { DemoGuide, demoHint } from "./DemoGuide";
 import { interpLabel, StatusChip } from "./StatusChip";
-import type { Catalog, CdsError, DemoInfo, Hl7View, PatientChart, Staff, WardCard, WorklistItem } from "./types";
+import type { AuditEvent, Catalog, CdsError, DemoInfo, Hl7View, PatientChart, Staff, WardCard, WorklistItem } from "./types";
+
+function formatCreatinine(value: number): string {
+  return value.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+}
+
+function formatEgfr(value: number): string {
+  return Math.round(value).toLocaleString("de-DE");
+}
 
 type View = "ward" | "patient" | "lab" | "interop";
 
@@ -22,6 +31,7 @@ export default function App() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [worklist, setWorklist] = useState<WorklistItem[]>([]);
   const [messages, setMessages] = useState<Hl7View[]>([]);
+  const [audit, setAudit] = useState<AuditEvent[]>([]);
   const [fhir, setFhir] = useState("");
   const [selectedHl7, setSelectedHl7] = useState<string>("");
   const [flash, setFlash] = useState("");
@@ -54,6 +64,12 @@ export default function App() {
     setCatalog(await api.catalog());
     setWorklist(await api.worklist());
     setMessages(await api.messages());
+    try {
+      const events = await api.audit();
+      setAudit(Array.isArray(events) ? events : []);
+    } catch {
+      setAudit([]);
+    }
     if (patient) {
       const chart = await api.patient(patient.id);
       setPatient(chart);
@@ -406,6 +422,27 @@ export default function App() {
                     </span>
                   ))}
                 </div>
+                {(patient.creatinineMgDl != null || patient.egfrMlMin != null) && (
+                  <div className="renal">
+                    <div className="kicker">Nierenfunktion</div>
+                    {patient.creatinineMgDl != null && (
+                      <div className="renal-item">
+                        <span>Kreatinin</span>
+                        <strong>
+                          {formatCreatinine(patient.creatinineMgDl)} <em>mg/dl</em>
+                        </strong>
+                      </div>
+                    )}
+                    {patient.egfrMlMin != null && (
+                      <div className="renal-item">
+                        <span>eGFR (CKD-EPI 2021)</span>
+                        <strong>
+                          {formatEgfr(patient.egfrMlMin)} <em>ml/min/1,73 m²</em>
+                        </strong>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {staff.role !== "PHYSICIAN" && patient.demoStar && step >= 4 && (
                   <div className="row" style={{ marginTop: 12 }}>
                     <button className="primary" onClick={() => void enter("weber")}>
@@ -595,7 +632,9 @@ export default function App() {
           )}
 
           {view === "interop" && (
-            <section className="split">
+            <>
+              <p className="muted">Audit nach CPOE, AMTS und Labor — jede Aktion im Protokoll darunter.</p>
+              <section className="split">
               <article className="card">
                 <h2>HL7 v2 (ORM / ORU / ACK)</h2>
                 <table>
@@ -649,6 +688,8 @@ export default function App() {
                 <pre>{fhir || "Akte öffnen, dann FHIR-Bundle laden."}</pre>
               </article>
             </section>
+              <AuditLog events={audit} />
+            </>
           )}
         </main>
         <DemoGuide steps={steps} step={step} hint={hint} />

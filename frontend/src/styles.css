@@ -205,6 +205,21 @@ pre {
   background: rgba(233, 196, 106, 0.12);
 }
 .alert.overlap strong { color: var(--warn); }
+.renal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 28px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-2);
+}
+.renal .kicker { width: 100%; }
+.renal-item span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 2px; }
+.renal-item strong { font-size: 18px; font-weight: 650; }
+.renal-item em { font-style: normal; color: var(--muted); font-size: 13px; font-weight: 500; }
 .flash { color: var(--teal); font-size: 13px; min-height: 1.2em; }
 .blocked-row td { background: rgba(238, 108, 77, 0.08); }
 .demo-row td { background: rgba(46, 196, 182, 0.07); }

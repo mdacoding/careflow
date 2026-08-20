@@ -79,9 +79,24 @@ export interface PatientChart {
   acuity: string;
   encounterId: string;
   admittedAt: string;
+  /** Serum-Kreatinin; fehlt z. B. bei Elena — dann nicht anzeigen. */
+  creatinineMgDl?: number | null;
+  /** eGFR nach CKD-EPI 2021 (race-free); fehlt, wenn kein Kreatinin. */
+  egfrMlMin?: number | null;
   allergies: { substance: string; atcPrefix: string | null; criticality: string }[];
   orders: OrderView[];
   alerts: { id: string; severity: string; ruleId: string; title: string; message: string; overridden: boolean }[];
+}
+
+export interface AuditEvent {
+  id: string;
+  actor?: string | null;
+  actorRole?: string | null;
+  action?: string | null;
+  entityType?: string | null;
+  entityId?: string | null;
+  detail?: string | null;
+  createdAt?: string | null;
 }
 
 export interface WorklistItem {
